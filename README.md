@@ -1,16 +1,22 @@
-### Hi there 👋
+# OpenIsobus
 
-<!--
-**OpenIsobus/OpenIsobus** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+An open implementation of the ISO11783 standard.
 
-Here are some ideas to get you started:
+**Disclaimer**: Since this crate is in active development as of 10-2022, API changes may appear at any time. Please consider this if
+you want to use this crate.
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Installation
+
+- Use `open-isobus` as a dependency in cargo.toml
+
+## License / Terms of Usage
+
+The source code of this project is licensed under the MIT/Apache-2.0 license. This implies that you are free to use, share, and adapt it. However, please give appropriate credit by citing the project.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the MIT/Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+## Contact
+
+If you have problems using the software, find mistakes, or have general questions please use the [issue tracker](https://github.com/OpenIsobus/OpenIsobus/issues) to contact us.

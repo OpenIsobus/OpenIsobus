@@ -1,0 +1,11 @@
+[package]
+name = "object_pool"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+std = []
+
+[dependencies]
+name = { version = "0.1.0", path = "../name" }

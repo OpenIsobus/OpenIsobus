@@ -1,0 +1,8 @@
+[package]
+name = "open_isobus"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+name = { version = "0.1.0", path = "../name" }
+object_pool = { version = "0.1.0", path = "../object_pool" }

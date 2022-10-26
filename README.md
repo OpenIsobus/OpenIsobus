@@ -1,9 +1,8 @@
 # OpenIsobus
 
-An open implementation of the ISO11783 standard.
+An open implementation of the ISO11783 standard written in [Rust](https://www.rust-lang.org/).
 
-**Disclaimer**: Since this crate is in active development as of 10-2022, API changes may appear at any time. Please consider this if
-you want to use this crate.
+**Disclaimer**: Since this crate is in active development as of 10-2022, API changes may appear at any time. Please consider this if you want to use this crate.
 
 ## Installation
 

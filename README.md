@@ -14,7 +14,7 @@ or
 
 - Run one of the [examples](#examples) given below.
 
-**Note**; The dev-dependency `embassy` requires the nightly toolchain, on Windows use `rustup default nightly-x86_64-pc-windows-msvc`
+**Note**; The dev-dependency `embassy` requires the nightly toolchain `rustup toolchain install nightly`
 
 ### Features
 - `std` Use the rust standard library, don't use for `no_std` comatibility.

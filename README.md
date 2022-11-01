@@ -2,11 +2,19 @@
 
 An open implementation of the ISO11783 standard written in [Rust](https://www.rust-lang.org/).
 
+**Currently in the proces of splitting the big `open-isobus` crate into multiple independent crates**
+
 **Disclaimer**: Since this crate is in active development as of 10-2022, API changes may appear at any time. Please consider this if you want to use this crate.
 
 ## Installation
 
-- Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml
+- Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml of your project
+
+or
+
+- Run one of the [examples](#examples) given below.
+
+**Note**; The dev-dependency `embassy` requires the nightly toolchain, on Windows use `rustup default nightly-x86_64-pc-windows-msvc`
 
 ### Features
 - `std` Use the rust standard library, don't use for `no_std` comatibility.
@@ -20,6 +28,12 @@ An open implementation of the ISO11783 standard written in [Rust](https://www.ru
 ### Logging
 - `log_can`, log all send CAN messages and incomming messages addressed to us.
 - `log_all_can`, log all send CAN messages and all incomming network messages.
+
+## Examples
+To try the library, download the git repository and run one of the following cargo commands:
+- `cargo run --example embassy` To use the embassy library for embedded multi threading.
+- `cargo run --example no_std` To use a pure single threaded implementation. **NOTE: As this is a demo, it still uses std for the timekeeping**
+- `cargo run --example threads` To use std::thread for multi threading.
 
 ## License / Terms of Usage
 

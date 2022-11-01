@@ -8,13 +8,13 @@ An open implementation of the ISO11783 standard written in [Rust](https://www.ru
 
 ## Installation
 
-**Note**; The dev-dependency `embassy` requires the nightly toolchain, on Windows use `rustup default nightly-x86_64-pc-windows-msvc`
-
 - Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml of your project
 
 or
 
 - Run one of the [examples](#examples) given below.
+
+**Note**; The dev-dependency `embassy` requires the nightly toolchain, on Windows use `rustup default nightly-x86_64-pc-windows-msvc`
 
 ### Features
 - `std` Use the rust standard library, don't use for `no_std` comatibility.

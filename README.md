@@ -14,10 +14,6 @@ or
 
 - Run one of the [examples](#examples) given below.
 
-**Note**; The dev-dependency `embassy` requires the nightly toolchain; 
-- Install with `rustup toolchain install nightly`
-- Set as default with `rustup default nightly`
-
 ### Features
 - `std` Use the rust standard library, don't use for `no_std` compatibility.
 - `default` = `["mock_can_driver", "log_can"]`
@@ -36,6 +32,10 @@ To try the library, download the git repository and run one of the following car
 - `cargo run --example embassy` To use the embassy library for embedded multi threading.
 - `cargo run --example no_std` To use a single threaded implementation. **NOTE: As this is a demo, it still uses std for timekeeping**
 - `cargo run --example threads` To use std::thread for multi threading.
+
+**Note**; The dev-dependency `embassy` requires the nightly toolchain; 
+- Install with `rustup toolchain install nightly`
+- Set as default with `rustup default nightly`
 
 ## License / Terms of Usage
 

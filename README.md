@@ -6,7 +6,20 @@ An open implementation of the ISO11783 standard written in [Rust](https://www.ru
 
 ## Installation
 
-- Use `open-isobus` as a dependency in cargo.toml
+- Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml
+
+### Features
+- `std` Use the rust standard library, don't use for `no_std` comatibility.
+- `default` = `["mock_can_driver", "log_can"]`
+- `win32` = `["std", "peak_can_driver", "log_can"]` Use on windows with Peak CAN Driver.
+- `cm4` = `["std", "socket_can_driver"]` Use on the Raspberry Pi 4 or the Raspberry Pi CM4.
+### Can drivers
+- `peak_can_driver` Use PCANBasic.
+- `socket_can_driver` Use Linux socket_can.
+- `mock_can_driver` Use a mock implementation to prevent errors.
+### Logging
+- `log_can`, log all send CAN messages and incomming messages addressed to us.
+- `log_all_can`, log all send CAN messages and all incomming network messages.
 
 ## License / Terms of Usage
 

@@ -12,8 +12,8 @@ socketcan = { version = "1.7.0", optional = true }
 
 [features]
 default = ["mock_can_driver", "log_can"]
-# win32 = ["std", "peak_can_driver", "log_can"]
-# cm4 = ["std", "socket_can_driver"]
+win32 = ["std", "peak_can_driver", "log_can"]
+cm4 = ["std", "socket_can_driver"]
 
 # Driver options
 std = []

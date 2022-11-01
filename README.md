@@ -8,6 +8,8 @@ An open implementation of the ISO11783 standard written in [Rust](https://www.ru
 
 ## Installation
 
+**Note**; The dev-dependency `embassy` requires the nightly toolchain, on Windows use `rustup default nightly-x86_64-pc-windows-msvc`
+
 - Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml of your project
 
 or

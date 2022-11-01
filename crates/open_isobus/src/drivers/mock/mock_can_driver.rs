@@ -21,9 +21,7 @@ impl CanDriverTrait for MockCanDriver {
 
     fn close(&mut self) {}
 
-    fn read(&mut self) -> Option<CanFrame> {
-        None
-    }
+    fn read(&mut self) -> Option<CanFrame> { None }
 
     fn write(&mut self, _frame: CanFrame) {}
 }

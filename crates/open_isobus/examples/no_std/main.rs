@@ -1,7 +1,6 @@
-#![feature(type_alias_impl_trait)]
-
-// To run this example with no_std, you have to provide an alternative source of time.
+// In a real no_std/ no_main, you have to provide an alternative source of time.
 // #![no_std]
+// #![no_main]
 use std::time::Instant;
 
 extern crate alloc;

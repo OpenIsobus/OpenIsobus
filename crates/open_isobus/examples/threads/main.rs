@@ -1,5 +1,3 @@
-#![feature(type_alias_impl_trait)]
-
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -14,10 +12,19 @@ fn main() {
         .filter_level(log::LevelFilter::Debug)
         .format_timestamp_nanos()
         .init();
-
+    
+    // Start the isobus thread
     thread::spawn(|| {
         isobus_task();
     });
+
+    // Start some other thread
+    thread::spawn(|| {
+        heartbeat_task();
+    });
+
+    // For example; Do all of our GUI in the main thread.
+    loop {}
 }
 
 fn isobus_task() {
@@ -36,7 +43,6 @@ fn isobus_task() {
         .build();
 
     // iop file paths
-    // let iop_file_path_in = std::path::PathBuf::from("MyProject1.iop");
     let iop_file_path_in = std::path::PathBuf::from("input.iop");
     let iop_file_path_out = std::path::PathBuf::from("output.iop");
 
@@ -46,9 +52,10 @@ fn isobus_task() {
         Err(_) => Vec::new(),
     };
     let op: ObjectPool = ObjectPool::from_iop(iop_data);
+    let op_data: Vec<u8> = op.as_iop();
 
     // Write iop file to compare.
-    std::fs::write(iop_file_path_out, op.as_iop()).unwrap();
+    std::fs::write(iop_file_path_out, op_data).unwrap();
 
     let startup_time = Instant::now();
 
@@ -60,8 +67,7 @@ fn isobus_task() {
     }
 }
 
-#[embassy_executor::task]
-async fn heartbeat() {
+fn heartbeat_task() {
     loop {
         log::info!("tick");
         thread::sleep(Duration::from_secs(1));

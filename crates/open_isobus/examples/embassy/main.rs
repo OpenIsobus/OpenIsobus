@@ -31,7 +31,7 @@ async fn main(spawner: Spawner) {
 
     loop {
         if let Ok(e) = CHANNEL.try_recv() {
-            log::info!("{} reveived!", e);
+            log::info!("{} received!", e);
         }
 
         embassy_futures::yield_now().await
@@ -40,7 +40,7 @@ async fn main(spawner: Spawner) {
 
 #[embassy_executor::task]
 async fn working_set_task(sender: DynamicSender<'static, bool>) {
-    // programaticaly build an object pool.
+    // Programaticaly build an object pool.
     let mut op: ObjectPool = ObjectPool::new();
     op.add(Object::WorkingSet(
         open_isobus::iso_11783_6::objects::WorkingSet {

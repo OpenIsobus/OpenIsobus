@@ -19,7 +19,7 @@ or
 - Set as default with `rustup default nightly`
 
 ### Features
-- `std` Use the rust standard library, don't use for `no_std` comatibility.
+- `std` Use the rust standard library, don't use for `no_std` compatibility.
 - `default` = `["mock_can_driver", "log_can"]`
 - `win32` = `["std", "peak_can_driver", "log_can"]` Use on windows with Peak CAN Driver.
 - `cm4` = `["std", "socket_can_driver"]` Use on the Raspberry Pi 4 or the Raspberry Pi CM4.

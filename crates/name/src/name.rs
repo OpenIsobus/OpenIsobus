@@ -1,5 +1,5 @@
 
-use crate::IndustryGroup;
+use crate::{IndustryGroup, DeviceClass};
 
 #[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Name {
@@ -20,8 +20,8 @@ impl Name {
     pub fn device_class_instance(&self) -> u8 {
         (self.value >> 56 & 0xF) as u8
     }
-    pub fn device_class(&self) -> u8 {
-        (self.value >> 49 & 0x7F) as u8
+    pub fn device_class(&self) -> DeviceClass {
+        ((self.value >> 49 & 0x7F) as u8, Some(self.industry_group())).into()
     }
     pub fn function(&self) -> u8 {
         (self.value >> 40 & 0xFF) as u8
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn name_device_class() {
         let name = Name::from(0b1000111100000000111111110000011100000000000111111111111111111111);
-        assert_eq!(name.device_class(), 0);
+        assert_eq!(name.device_class(), DeviceClass::NonSpecificSystem(IndustryGroup::Global));
     }
 
     #[test]

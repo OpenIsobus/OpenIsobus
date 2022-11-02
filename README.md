@@ -8,7 +8,7 @@ An open implementation of the ISO11783 standard written in [Rust](https://www.ru
 
 ## Installation
 
-- Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in cargo.toml of your project
+- Use `open-isobus = { git = "https://github.com/OpenIsobus/OpenIsobus.git" }` as a dependency in the `cargo.toml` of your project
 
 or
 
@@ -18,7 +18,7 @@ or
 - `std` Use the rust standard library, don't use for `no_std` compatibility.
 - `default` = `["mock_can_driver", "log_can"]`
 - `win32` = `["std", "peak_can_driver", "log_can"]` Use on windows with Peak CAN Driver.
-- `cm4` = `["std", "socket_can_driver"]` Use on the Raspberry Pi 4 or the Raspberry Pi CM4.
+- `cm4` = `["std", "socket_can_driver", "log_can"]` Use on the Raspberry Pi 4 or the Raspberry Pi CM4.
 ### Can drivers
 - `peak_can_driver` Use PCANBasic.
 - `socket_can_driver` Use Linux socket_can.
@@ -29,7 +29,7 @@ or
 
 ## Examples
 To try the library, download the git repository and run one of the following cargo commands:
-- `cargo run --example embassy` To use the embassy library for embedded multi threading.
+- `cargo run --example embassy` To use the [embassy](https://github.com/embassy-rs/embassy) library for embedded multi threading.
 - `cargo run --example no_std` To use a single threaded implementation. **NOTE: As this is a demo, it still uses std for timekeeping**
 - `cargo run --example threads` To use std::thread for multi threading.
 

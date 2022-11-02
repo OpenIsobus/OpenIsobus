@@ -1,6 +1,8 @@
-/// Struct containing all Industry Groups
+
+
+/// Enum containing all Industry Groups
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
-pub enum IndustryGroupEnum {
+pub enum IndustryGroup {
     #[default] Global = 0,
     OnHighwayEquipment = 1,
     AgriculturalAndForestryEquipment = 2,
@@ -11,30 +13,30 @@ pub enum IndustryGroupEnum {
     ReservedForSAE2 = 7,
 }
 
-impl core::fmt::Display for IndustryGroupEnum {
+impl core::fmt::Display for IndustryGroup {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl From<u8> for IndustryGroupEnum {
+impl From<u8> for IndustryGroup {
     fn from(value: u8) -> Self {
         match value {
-            0 => IndustryGroupEnum::Global,
-            1 => IndustryGroupEnum::OnHighwayEquipment,
-            2 => IndustryGroupEnum::AgriculturalAndForestryEquipment,
-            3 => IndustryGroupEnum::ConstructionEquipment,
-            4 => IndustryGroupEnum::MarineEquipment,
-            5 => IndustryGroupEnum::IndustrialProcessControl,
-            6 => IndustryGroupEnum::ReservedForSAE1,
-            7 => IndustryGroupEnum::ReservedForSAE2,
-            _ => IndustryGroupEnum::default(),
+            0 => IndustryGroup::Global,
+            1 => IndustryGroup::OnHighwayEquipment,
+            2 => IndustryGroup::AgriculturalAndForestryEquipment,
+            3 => IndustryGroup::ConstructionEquipment,
+            4 => IndustryGroup::MarineEquipment,
+            5 => IndustryGroup::IndustrialProcessControl,
+            6 => IndustryGroup::ReservedForSAE1,
+            7 => IndustryGroup::ReservedForSAE2,
+            _ => IndustryGroup::default(),
         }
     }
 }
 
-impl From<IndustryGroupEnum> for u8 {
-    fn from(value: IndustryGroupEnum) -> Self {
+impl From<IndustryGroup> for u8 {
+    fn from(value: IndustryGroup) -> Self {
         value as u8
     }
 }

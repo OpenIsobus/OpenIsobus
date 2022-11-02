@@ -1,5 +1,5 @@
 
-use crate::IndustryGroupEnum;
+use crate::IndustryGroup;
 
 #[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Name {
@@ -14,7 +14,7 @@ impl Name {
     pub fn has_self_configurable_address(&self) -> bool {
         self.value >> 63 != 0
     }
-    pub fn industry_group(&self) -> IndustryGroupEnum {
+    pub fn industry_group(&self) -> IndustryGroup {
         ((self.value >> 60 & 0x7) as u8).into()
     }
     pub fn device_class_instance(&self) -> u8 {
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn name_industry_group() {
         let name = Name::from(0b1000111100000000111111110000011100000000000111111111111111111111);
-        assert_eq!(name.industry_group(), IndustryGroupEnum::Global);
+        assert_eq!(name.industry_group(), IndustryGroup::Global);
     }
 
     #[test]

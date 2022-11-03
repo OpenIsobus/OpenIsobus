@@ -1,6 +1,6 @@
 # OpenIsobus
 
-[![Open Issues](https://img.shields.io/github/issues-raw/openisobus/openisobus)]([https://github/openisobus/openisobus](https://github.com/OpenIsobus/OpenIsobus/issues))
+[![Open Issues](https://img.shields.io/github/issues-raw/openisobus/openisobus)](https://github.com/OpenIsobus/OpenIsobus/issues)
 [![Crate License](https://img.shields.io/crates/l/pcan-basic.svg)](https://github/OpenIsobus/OpenIsobus)
 [![Dependency Status](https://deps.rs/repo/github/openisobus/openisobus/status.svg)](https://deps.rs/repo/github/openisobus/openisobus)
 

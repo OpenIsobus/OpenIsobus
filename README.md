@@ -1,5 +1,9 @@
 # OpenIsobus
 
+[![Open Issues](https://img.shields.io/github/issues-raw/openisobus/openisobus)]([https://github/openisobus/openisobus](https://github.com/OpenIsobus/OpenIsobus/issues))
+[![Crate License](https://img.shields.io/crates/l/pcan-basic.svg)](https://github/OpenIsobus/OpenIsobus)
+[![Dependency Status](https://deps.rs/repo/github/openisobus/openisobus/status.svg)](https://deps.rs/repo/github/openisobus/openisobus)
+
 An open implementation of the ISO11783 standard written in [Rust](https://www.rust-lang.org/).
 
 **Currently in the proces of splitting the big `open-isobus` crate into multiple independent crates**

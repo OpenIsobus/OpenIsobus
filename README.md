@@ -6,7 +6,7 @@
 
 An open implementation of the ISO11783 standard written in [Rust](https://www.rust-lang.org/).
 
-**Disclaimer: Because of te speed of development of the [Isobus++](https://github.com/ad3154/ISO11783-CAN-Stack) project. I have, for now, halted development of this library. I see more benefits in writing a Rust wrapper for the Isobus++ library. More information to follow.**
+**Disclaimer: Because of te speed of development of the [AgIsoStack++](https://github.com/Open-Agriculture/AgIsoStack-plus-plus) project. I have, for now, halted development of this library. I see more benefits in writing a Rust wrapper for the AgIsoStack++ library. More information to follow.**
 
 ## Installation
 

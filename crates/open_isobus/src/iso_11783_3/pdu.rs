@@ -57,19 +57,19 @@ impl PDU {
     }
 
     pub fn priority(&self) -> u8 {
-        self.priority & 0b111
+        ((self.id().as_raw() >> 26) & 0b111) as u8
     }
-    pub fn extended_data_page(&self) -> u8 {
-        self.extended_data_page & 0b1
+    pub fn extended_data_page(&self) -> bool {
+        ((self.id().as_raw() >> 25) & 0b1) != 0
     }
-    pub fn data_page(&self) -> u8 {
-        self.data_page & 0b1
+    pub fn data_page(&self) -> bool {
+        ((self.id().as_raw() >> 24) & 0b1) != 0
     }
     pub fn pdu_format(&self) -> u8 {
-        self.pdu_format
+        (self.id().as_raw() >> 16) as u8
     }
     pub fn pdu_specific(&self) -> u8 {
-        self.pdu_specific
+        (self.id().as_raw() >> 8) as u8
     }
     pub fn destination_address(&self) -> IsobusAddress {
         IsobusAddress(self.pdu_specific)

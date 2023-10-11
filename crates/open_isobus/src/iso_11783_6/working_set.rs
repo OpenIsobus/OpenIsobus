@@ -7,7 +7,7 @@ use crate::{
     Isobus, IsobusAddress,
 };
 
-use super::{ObjectPool, events::EventType, pdu::*};
+use super::{events::EventType, pdu::*, ObjectPool};
 
 #[derive(Debug, PartialEq)]
 enum State {
@@ -245,21 +245,21 @@ impl WorkingSet {
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Pressed => {
                             self.event_queue.push_back(EventType::SoftKeyPressed(
                                 data.id,
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Held => {
                             self.event_queue.push_back(EventType::SoftKeyHeld(
                                 data.id,
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Aborted => todo!(),
                     }
 
@@ -284,21 +284,21 @@ impl WorkingSet {
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Pressed => {
                             self.event_queue.push_back(EventType::SoftKeyPressed(
                                 data.id,
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Held => {
                             self.event_queue.push_back(EventType::SoftKeyHeld(
                                 data.id,
                                 data.parent_id,
                                 data.key_number,
                             ));
-                        },
+                        }
                         KeyActivationCode::Aborted => todo!(),
                     }
 
@@ -330,6 +330,24 @@ impl WorkingSet {
         self.event_queue.pop_front()
     }
 
+    pub fn send_event(&mut self, event: EventType, time: u64) {
+        match event {
+            EventType::NumericValueChanged(id, value) => {
+                let data = ChangeNumericValueCommand { id, value };
+
+                self.isobus.send(
+                    PDU::new_change_numeric_value_command(
+                        self.connected_vt,
+                        self.isobus.claimed_address(),
+                        data,
+                    ),
+                    time,
+                );
+            }
+            _ => {}
+        }
+    }
+
     fn is_vt_connected(&mut self) -> bool {
         self.connected_vt != IsobusAddress::NULL
     }
@@ -339,7 +357,9 @@ impl WorkingSet {
     }
 
     fn cyclic_send_working_set_maintenance_message(&mut self, time: u64) {
-        if time < self.working_set_maintenance_time + 1000 { return; }
+        if time < self.working_set_maintenance_time + 1000 {
+            return;
+        }
 
         let bit_mask = if self.is_first_working_set_maintenance {
             self.is_first_working_set_maintenance = false;
@@ -354,10 +374,14 @@ impl WorkingSet {
         };
 
         self.isobus.send(
-            PDU::new_working_set_maintenance_message(self.connected_vt, self.isobus.claimed_address(), data),
+            PDU::new_working_set_maintenance_message(
+                self.connected_vt,
+                self.isobus.claimed_address(),
+                data,
+            ),
             time,
         );
-        
+
         self.working_set_maintenance_time = time;
     }
 }

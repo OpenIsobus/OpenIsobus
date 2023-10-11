@@ -6,9 +6,7 @@
 
 An open implementation of the ISO11783 standard written in [Rust](https://www.rust-lang.org/).
 
-**Currently in the proces of splitting the big `open-isobus` crate into multiple independent crates**
-
-**Disclaimer**: Since this crate is in active development as of 11-2022, API changes may appear at any time. Please consider this if you want to use this crate.
+**Disclaimer: Because of te speed of development of the [AgIsoStack++](https://github.com/Open-Agriculture/AgIsoStack-plus-plus) project. I have, for now, halted development of this library. I see more benefits in writing a Rust wrapper for the AgIsoStack++ library. More information to follow.**
 
 ## Installation
 

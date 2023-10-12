@@ -680,6 +680,85 @@ impl From<&[u8]> for ButtonActivationResponse {
     }
 }
 
+// TODO: Accept diffrent sized values
+/// Datastructure for [`MessageType::VTChangeNumericValue`] commands.
+#[derive(Debug, Default)]
+pub struct VTChangeNumericValueCommand {
+    pub id: ObjectId,
+    pub value: u32,
+}
+impl From<VTChangeNumericValueResponse> for VTChangeNumericValueCommand {
+    fn from(src: VTChangeNumericValueResponse) -> Self {
+        let mut dst = VTChangeNumericValueCommand::default();
+        dst.id = src.id;
+        dst.value = src.value;
+        dst
+    }
+}
+impl From<VTChangeNumericValueCommand> for Vec<u8> {
+    fn from(src: VTChangeNumericValueCommand) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::VTChangeNumericValue as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst[4..=7].copy_from_slice(&src.value.to_le_bytes());
+        dst
+    }
+}
+impl From<&[u8]> for VTChangeNumericValueCommand {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = VTChangeNumericValueCommand::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.id = val.into();
+        }
+        if let Some(val) = src.get(4..=7) {
+            dst.value = u32::from_le_bytes([val[0], val[1], val[2], val[3]]);
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::VTChangeNumericValue`] responses.
+#[derive(Debug, Default)]
+pub struct VTChangeNumericValueResponse {
+    pub id: ObjectId,
+    pub error_code: u8,
+    pub value: u32,
+}
+impl From<VTChangeNumericValueCommand> for VTChangeNumericValueResponse {
+    fn from(src: VTChangeNumericValueCommand) -> Self {
+        let mut dst = VTChangeNumericValueResponse::default();
+        dst.id = src.id;
+        dst.error_code = 0;
+        dst.value = src.value;
+        dst
+    }
+}
+impl From<VTChangeNumericValueResponse> for Vec<u8> {
+    fn from(src: VTChangeNumericValueResponse) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::VTChangeNumericValue as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst[3] = src.error_code;
+        dst[4..=7].copy_from_slice(&src.value.to_le_bytes());
+        dst
+    }
+}
+impl From<&[u8]> for VTChangeNumericValueResponse {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = VTChangeNumericValueResponse::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.id = val.into();
+        }
+        if let Some(&val) = src.get(3) {
+            dst.error_code = val;
+        }
+        if let Some(val) = src.get(4..=7) {
+            dst.value = u32::from_le_bytes([val[0], val[1], val[2], val[3]]);
+        }
+        dst
+    }
+}
+
 /// Datastructure for [`MessageType::ChangeNumericValue`] commands.
 #[derive(Debug, Default)]
 pub struct ChangeNumericValueCommand {

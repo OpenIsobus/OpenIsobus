@@ -1,3 +1,4 @@
+use alloc::string::String;
 
 use super::objects::ObjectId;
 
@@ -15,5 +16,6 @@ pub enum EventType {
     InputObjectDeselected(ObjectId),
     // VT ESC,
     NumericValueChanged(ObjectId, u32),
-    ActiveMaskChanged(),
+    ActiveMaskChanged(ObjectId, ObjectId),
+    StringValueChanged(ObjectId, String),
 }

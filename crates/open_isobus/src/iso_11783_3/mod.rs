@@ -54,7 +54,7 @@ impl PDU {
         vec.push(16);
         vec.extend_from_slice(&number_of_bytes.to_le_bytes());
         vec.push(number_of_packets);
-        vec.push(0xFF);
+        vec.push(0x10);
         vec.extend_from_slice(&message_pgn.as_bytes());
         PDU::new(7, 0, 0, 236, da.into(), sa.into(), vec)
     }

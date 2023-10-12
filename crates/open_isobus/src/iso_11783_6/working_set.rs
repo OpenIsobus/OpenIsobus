@@ -313,6 +313,23 @@ impl WorkingSet {
                     );
                 }
 
+                if pdu.is_vt_change_numeric_value_command() {
+                    let data: VTChangeNumericValueCommand = pdu.data_raw().into();
+
+                    self.event_queue
+                        .push_back(EventType::NumericValueChanged(data.id, data.value));
+
+                    // Send optional response.
+                    self.isobus.send(
+                        PDU::new_vt_change_numeric_value_response(
+                            self.connected_vt,
+                            self.isobus.claimed_address(),
+                            data.into(),
+                        ),
+                        time,
+                    );
+                }
+
                 continue;
             }
         }
@@ -337,6 +354,33 @@ impl WorkingSet {
 
                 self.isobus.send(
                     PDU::new_change_numeric_value_command(
+                        self.connected_vt,
+                        self.isobus.claimed_address(),
+                        data,
+                    ),
+                    time,
+                );
+            }
+            EventType::ActiveMaskChanged(working_set_id, mask_id) => {
+                let data = ChangeActiveMaskCommand {
+                    working_set_id,
+                    mask_id,
+                };
+
+                self.isobus.send(
+                    PDU::new_change_active_mask_command(
+                        self.connected_vt,
+                        self.isobus.claimed_address(),
+                        data,
+                    ),
+                    time,
+                );
+            }
+            EventType::StringValueChanged(id, value) => {
+                let data = ChangeStringValueCommand { id, value };
+
+                self.isobus.send(
+                    PDU::new_change_string_value_command(
                         self.connected_vt,
                         self.isobus.claimed_address(),
                         data,

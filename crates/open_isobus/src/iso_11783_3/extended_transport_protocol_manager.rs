@@ -100,24 +100,25 @@ impl ExtendedTransportProtocolManager {
         }
 
         // Received a clear to send meant for us.
-        if pdu.is_etp_clear_to_send() && pdu.is_address_specific(claimed_address) {
-            if self.state() == State::Sending {
-                let data: [u8; 8] = pdu.data::<8>();
-                let nr_of_packets = data[1];
-                let next_packet = u32::from_le_bytes([data[2], data[3], data[4], 0x00]);
+        if pdu.is_etp_clear_to_send()
+            && pdu.is_address_specific(claimed_address)
+            && self.state() == State::Sending
+        {
+            let data: [u8; 8] = pdu.data::<8>();
+            let nr_of_packets = data[1];
+            let next_packet = u32::from_le_bytes([data[2], data[3], data[4], 0x00]);
 
-                if nr_of_packets == 0 {
-                    self.timeout_time = time + ETP_TIMEOUT_T4;
-                } else {
-                    self.send_pdu_data(
-                        can,
-                        next_packet,
-                        nr_of_packets,
-                        pdu.source_address(),
-                        claimed_address,
-                    );
-                    self.timeout_time = time + ETP_TIMEOUT_T3;
-                }
+            if nr_of_packets == 0 {
+                self.timeout_time = time + ETP_TIMEOUT_T4;
+            } else {
+                self.send_pdu_data(
+                    can,
+                    next_packet,
+                    nr_of_packets,
+                    pdu.source_address(),
+                    claimed_address,
+                );
+                self.timeout_time = time + ETP_TIMEOUT_T3;
             }
         }
 

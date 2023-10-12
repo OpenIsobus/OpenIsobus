@@ -86,7 +86,7 @@ impl TransportProtocolManager {
                 );
 
                 self.receive_pgn = Some(packet_pgn);
-                self.timeout_time = TP_TIMEOUT_T2;
+                self.timeout_time = time + TP_TIMEOUT_T2;
             } else {
                 // If we are already in a connection, abort the new connection.
                 can.write(
@@ -102,74 +102,75 @@ impl TransportProtocolManager {
         }
 
         // Received a clear to send meant for us.
-        if pdu.is_tp_clear_to_send() {
-            if self.state() == State::Sending {
-                let data: [u8; 8] = pdu.data::<8>();
-                let nr_of_packets = data[1];
-                let next_packet = data[2];
+        if pdu.is_tp_clear_to_send() && self.state() == State::Sending {
+            let data: [u8; 8] = pdu.data::<8>();
+            let nr_of_packets = data[1];
+            let next_packet = data[2];
 
-                if nr_of_packets == 0 {
-                    self.timeout_time = TP_TIMEOUT_T4;
-                } else {
-                    self.send_pdu_data(
-                        can,
-                        next_packet,
-                        nr_of_packets,
-                        pdu.source_address(),
-                        claimed_address,
-                    );
-                    self.timeout_time = TP_TIMEOUT_T3;
-                }
+            if nr_of_packets == 0 {
+                self.timeout_time = time + TP_TIMEOUT_T4;
+            } else {
+                self.send_pdu_data(
+                    can,
+                    next_packet,
+                    nr_of_packets,
+                    pdu.source_address(),
+                    claimed_address,
+                );
+                self.timeout_time = time + TP_TIMEOUT_T3;
             }
         }
 
         // Received an end of message meant for us.
-        if pdu.is_tp_end_of_message_acknowledge() {
-            if self.state() == State::Sending {
+        if pdu.is_tp_end_of_message_acknowledge() && self.state() == State::Sending {
+            let finished_pdu = self.pdu_to_send.take();
+            self.close_connection();
+
+            // If we have PDUs in the backlog, start a new connection.
+            if let Some(pdu) = self.backlog.pop_front() {
+                self.open_sending_connection(can, pdu, time);
+            }
+
+            return finished_pdu;
+        }
+
+        // Received an data transfer meant for us.
+        if pdu.is_tp_data_transfer() && self.state() == State::Receiving {
+            let data: [u8; 8] = pdu.data::<8>();
+            let packet_nr = data[0];
+
+            for i in 0..7 {
+                self.receive_buffer[((packet_nr - 1) * 7 + i) as usize] = data[(i + 1) as usize];
+            }
+
+            self.timeout_time = time + TP_TIMEOUT_T1;
+
+            if self.receive_nr_of_packets == packet_nr {
+                if let Some(pgn) = self.receive_pgn {
+                    can.write(
+                        PDU::new_tp_end_of_message_acknowledge(
+                            self.receive_buffer.len() as u16,
+                            self.receive_nr_of_packets,
+                            pgn,
+                            pdu.source_address(),
+                            claimed_address,
+                        )
+                        .into(),
+                    );
+                }
+
                 let finished_pdu = self.pdu_to_send.take();
                 self.close_connection();
-
-                // If we have PDUs in the backlog, start a new connection.
-                if let Some(pdu) = self.backlog.pop_front() {
-                    self.open_sending_connection(can, pdu, time);
-                }
 
                 return finished_pdu;
             }
         }
 
-        // Received an data transfer meant for us.
-        if pdu.is_tp_data_transfer() {
-            if self.state() == State::Receiving {
-                let data: [u8; 8] = pdu.data::<8>();
-                let packet_nr = data[0];
-
-                for i in 0..7 {
-                    self.receive_buffer[((packet_nr - 1) * 7 + i) as usize] =
-                        data[(i + 1) as usize];
-                }
-
-                self.timeout_time = TP_TIMEOUT_T1;
-
-                if self.receive_nr_of_packets == packet_nr {
-                    if let Some(pgn) = self.receive_pgn {
-                        can.write(
-                            PDU::new_tp_end_of_message_acknowledge(
-                                self.receive_buffer.len() as u16,
-                                self.receive_nr_of_packets,
-                                pgn,
-                                pdu.source_address(),
-                                claimed_address,
-                            )
-                            .into(),
-                        );
-                    }
-
-                    let finished_pdu = self.pdu_to_send.take();
-                    self.close_connection();
-
-                    return finished_pdu;
-                }
+        // Received a connection abort meant for us.
+        if pdu.is_tp_connection_abort() && self.state() == State::Sending {
+            if let Some(pdu) = self.pdu_to_send.take() {
+                self.close_connection();
+                self.send(can, pdu, time);
             }
         }
 
@@ -199,9 +200,9 @@ impl TransportProtocolManager {
     }
 
     // TODO: Cleanup connection creation
-    fn open_sending_connection(&mut self, can: &mut Box<dyn CanDriverTrait>, pdu: PDU, _time: u64) {
+    fn open_sending_connection(&mut self, can: &mut Box<dyn CanDriverTrait>, pdu: PDU, time: u64) {
         let number_of_bytes = pdu.data_len() as u16;
-        let number_of_packets = ((number_of_bytes - 1) / 7) as u8;
+        let number_of_packets = ((number_of_bytes + 7 - 1) / 7) as u8; // Round up using (x+d-1)/d
 
         if pdu.is_pdu2() {
             can.write(
@@ -233,7 +234,7 @@ impl TransportProtocolManager {
             );
         }
 
-        self.timeout_time = TP_TIMEOUT_T3;
+        self.timeout_time = time + TP_TIMEOUT_T3;
         self.pdu_to_send = Some(pdu);
     }
 

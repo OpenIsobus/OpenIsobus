@@ -1,5 +1,5 @@
-use alloc::vec;
 use alloc::vec::Vec;
+use alloc::{string::String, vec};
 
 use bitflags::bitflags;
 
@@ -269,6 +269,36 @@ impl PDU {
         self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::ButtonActivation as u8
     }
 
+    /// Create a new `VT Change Numeric Value command` PDU.
+    ///
+    /// VT Function = 5
+    pub fn new_vt_change_numeric_value_command(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: VTChangeNumericValueCommand,
+    ) -> PDU {
+        PDU::new_vt_to_ecu(da, sa, data.into())
+    }
+    /// Check if `&self` is a `VT Change Numeric Value command` PDU.
+    pub fn is_vt_change_numeric_value_command(&self) -> bool {
+        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::VTChangeNumericValue as u8
+    }
+
+    /// Create a new `VT Change Numeric Value response` PDU.
+    ///
+    /// VT Function = 5
+    pub fn new_vt_change_numeric_value_response(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: VTChangeNumericValueResponse,
+    ) -> PDU {
+        PDU::new_ecu_to_vt(da, sa, data.into())
+    }
+    /// Check if `&self` is a `VT Change Numeric Value response` PDU.
+    pub fn is_vt_change_numeric_value_response(&self) -> bool {
+        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::VTChangeNumericValue as u8
+    }
+
     /// Create a new `Change Numeric Value command` PDU.
     ///
     /// VT Function = 168
@@ -277,11 +307,11 @@ impl PDU {
         sa: IsobusAddress,
         data: ChangeNumericValueCommand,
     ) -> PDU {
-        PDU::new_vt_to_ecu(da, sa, data.into())
+        PDU::new_ecu_to_vt(da, sa, data.into())
     }
     /// Check if `&self` is a `Soft Key Activation message` PDU.
     pub fn is_change_numeric_value_command(&self) -> bool {
-        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::ChangeNumericValue as u8
+        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::ChangeNumericValue as u8
     }
 
     /// Create a new `Change Numeric Value response` PDU.
@@ -292,11 +322,71 @@ impl PDU {
         sa: IsobusAddress,
         data: ChangeNumericValueResponse,
     ) -> PDU {
-        PDU::new_ecu_to_vt(da, sa, data.into())
+        PDU::new_vt_to_ecu(da, sa, data.into())
     }
     /// Check if `&self` is a `Soft Key Activation response` PDU.
     pub fn is_change_numeric_value_response(&self) -> bool {
-        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::ChangeNumericValue as u8
+        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::ChangeNumericValue as u8
+    }
+
+    /// Create a new `Change Active Mask command` PDU.
+    ///
+    /// VT Function = 173
+    pub fn new_change_active_mask_command(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: ChangeActiveMaskCommand,
+    ) -> PDU {
+        PDU::new_ecu_to_vt(da, sa, data.into())
+    }
+    /// Check if `&self` is a `Change Active Mask message` PDU.
+    pub fn is_change_active_mask_command(&self) -> bool {
+        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::ChangeActiveMask as u8
+    }
+
+    /// Create a new `Change Active Mask response` PDU.
+    ///
+    /// VT Function = 173
+    pub fn new_change_active_mask_response(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: ChangeActiveMaskResponse,
+    ) -> PDU {
+        PDU::new_vt_to_ecu(da, sa, data.into())
+    }
+    /// Check if `&self` is a `Change Active Mask response` PDU.
+    pub fn is_change_active_mask_response(&self) -> bool {
+        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::ChangeActiveMask as u8
+    }
+
+    /// Create a new `Change String Value command` PDU.
+    ///
+    /// VT Function = 179
+    pub fn new_change_string_value_command(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: ChangeStringValueCommand,
+    ) -> PDU {
+        PDU::new_ecu_to_vt(da, sa, data.into())
+    }
+    /// Check if `&self` is a `Change String Value message` PDU.
+    pub fn is_change_string_value_command(&self) -> bool {
+        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::ChangeStringValue as u8
+    }
+
+    /// Create a new `Change String Value response` PDU.
+    ///
+    /// VT Function = 179
+    pub fn new_change_string_value_response(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: ChangeStringValueResponse,
+    ) -> PDU {
+        PDU::new_vt_to_ecu(da, sa, data.into())
+    }
+    /// Check if `&self` is a `Change String Value response` PDU.
+    pub fn is_change_string_value_response(&self) -> bool {
+        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::ChangeStringValue as u8
     }
 
     pub fn new_request_language_command(da: IsobusAddress, sa: IsobusAddress) -> PDU {
@@ -816,7 +906,6 @@ impl From<ChangeNumericValueResponse> for Vec<u8> {
         let mut dst: Vec<u8> = vec![0xFF; 8];
         dst[0] = MessageType::ChangeNumericValue as u8;
         dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.id));
-        dst[3] = src.error_code;
         dst[4..=7].copy_from_slice(&src.value.to_le_bytes());
         dst
     }
@@ -832,6 +921,155 @@ impl From<&[u8]> for ChangeNumericValueResponse {
         }
         if let Some(val) = src.get(4..=7) {
             dst.value = u32::from_le_bytes([val[0], val[1], val[2], val[3]]);
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::ChangeActiveMask`] commands.
+#[derive(Debug, Default)]
+pub struct ChangeActiveMaskCommand {
+    pub working_set_id: ObjectId,
+    pub mask_id: ObjectId,
+}
+// impl From<ChangeActiveMaskResponse> for ChangeActiveMaskCommand {
+//     fn from(src: ChangeActiveMaskResponse) -> Self {
+//         let mut dst = ChangeActiveMaskCommand::default();
+//         dst.working_set_id = src.working_set_id;
+//         dst.mask_id = src.mask_id;
+//         dst
+//     }
+// }
+impl From<ChangeActiveMaskCommand> for Vec<u8> {
+    fn from(src: ChangeActiveMaskCommand) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::ChangeActiveMask as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.working_set_id));
+        dst[3..=4].copy_from_slice(&Vec::<u8>::from(src.mask_id));
+        dst
+    }
+}
+impl From<&[u8]> for ChangeActiveMaskCommand {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = ChangeActiveMaskCommand::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.working_set_id = val.into();
+        }
+        if let Some(val) = src.get(3..=4) {
+            dst.mask_id = val.into();
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::ChangeActiveMask`] responses.
+#[derive(Debug, Default)]
+pub struct ChangeActiveMaskResponse {
+    pub mask_id: ObjectId,
+    pub error_code: u8,
+}
+impl From<ChangeActiveMaskCommand> for ChangeActiveMaskResponse {
+    fn from(src: ChangeActiveMaskCommand) -> Self {
+        let mut dst = ChangeActiveMaskResponse::default();
+        dst.mask_id = src.mask_id;
+        dst.error_code = 0;
+        dst
+    }
+}
+impl From<ChangeActiveMaskResponse> for Vec<u8> {
+    fn from(src: ChangeActiveMaskResponse) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::ChangeActiveMask as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.mask_id));
+        dst[3] = src.error_code;
+        dst
+    }
+}
+impl From<&[u8]> for ChangeActiveMaskResponse {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = ChangeActiveMaskResponse::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.mask_id = val.into();
+        }
+        if let Some(&val) = src.get(3) {
+            dst.error_code = val;
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::ChangeStringValue`] commands.
+#[derive(Debug, Default)]
+pub struct ChangeStringValueCommand {
+    pub id: ObjectId,
+    pub value: String,
+}
+// impl From<ChangeStringValueResponse> for ChangeStringValueCommand {
+//     fn from(src: ChangeStringValueResponse) -> Self {
+//         let mut dst = ChangeStringValueCommand::default();
+//         dst.id = src.id;
+//         dst.value = src.value;
+//         dst
+//     }
+// }
+impl From<ChangeStringValueCommand> for Vec<u8> {
+    fn from(src: ChangeStringValueCommand) -> Self {
+        let str_len = src.value.len();
+        let mut dst: Vec<u8> = vec![0xFF; core::cmp::max(8, 5 + str_len)];
+        dst[0] = MessageType::ChangeStringValue as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst[3..=4].copy_from_slice(&(src.value.len() as u16).to_le_bytes());
+        dst[5..(5 + str_len)].copy_from_slice(src.value.as_bytes());
+        dst
+    }
+}
+impl From<&[u8]> for ChangeStringValueCommand {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = ChangeStringValueCommand::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.id = val.into();
+        }
+        if let Some(val) = src.get(5..) {
+            if let alloc::borrow::Cow::Owned(val) = String::from_utf8_lossy(val) {
+                dst.value = val;
+            }
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::ChangeStringValue`] responses.
+#[derive(Debug, Default)]
+pub struct ChangeStringValueResponse {
+    pub id: ObjectId,
+    pub error_code: u8,
+}
+// impl From<ChangeStringValueCommand> for ChangeStringValueResponse {
+//     fn from(src: ChangeStringValueCommand) -> Self {
+//         let mut dst = ChangeStringValueResponse::default();
+//         dst.id = src.id;
+//         dst.error_code = 0;
+//         dst.value = src.value;
+//         dst
+//     }
+// }
+impl From<ChangeStringValueResponse> for Vec<u8> {
+    fn from(src: ChangeStringValueResponse) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::ChangeStringValue as u8;
+        dst[3..=4].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst[5] = src.error_code;
+        dst
+    }
+}
+impl From<&[u8]> for ChangeStringValueResponse {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = ChangeStringValueResponse::default();
+        if let Some(val) = src.get(3..=4) {
+            dst.id = val.into();
+        }
+        if let Some(&val) = src.get(5) {
+            dst.error_code = val;
         }
         dst
     }

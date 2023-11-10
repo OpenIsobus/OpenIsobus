@@ -85,6 +85,10 @@ impl WorkingSet {
                     PDU::new_working_set_master(self.isobus.claimed_address()),
                     time,
                 );
+
+                // Send out the first Working set maintenance message.
+                self.cyclic_send_working_set_maintenance_message(time);
+
                 self.isobus.send(
                     PDU::new_request_language_command(
                         self.connected_vt,

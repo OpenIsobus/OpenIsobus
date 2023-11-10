@@ -832,10 +832,7 @@ impl Object {
         }
         Some(refs)
     }
-    fn read_bytes(
-        data: &mut dyn Iterator<Item = u8>,
-        nr_of_bytes: usize,
-    ) -> Option<Vec<u8>> {
+    fn read_bytes(data: &mut dyn Iterator<Item = u8>, nr_of_bytes: usize) -> Option<Vec<u8>> {
         let mut objs = Vec::new();
         for _ in 0..nr_of_bytes {
             objs.push(Self::read_u8(data)?)
@@ -897,10 +894,7 @@ impl Object {
     }
 
     fn read_bool(data: &mut dyn Iterator<Item = u8>) -> Option<bool> {
-        match data.next() {
-            Some(d) => Some(d != 0),
-            None => None,
-        }
+        data.next().map(|d| d != 0)
     }
     fn read_u8(data: &mut dyn Iterator<Item = u8>) -> Option<u8> {
         data.next()

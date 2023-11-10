@@ -73,7 +73,7 @@ impl DataLinkLayer {
 
             let pdu: PDU = (&frame).into();
 
-            // Only listen to global messages and messages ment for us
+            // Only listen to global messages and messages ment for us.
             if !pdu.is_address_global()
                 && !pdu.is_address_specific(network_manager.claimed_address())
             {

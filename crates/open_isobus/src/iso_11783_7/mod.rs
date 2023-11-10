@@ -2,9 +2,9 @@ pub mod language_settings;
 pub use language_settings::LanguageSettings;
 pub use language_settings::LanguageSettingsBuilder;
 
-use alloc::vec;
-use crate::IsobusAddress;
 use crate::iso_11783_3::{PDU, PGN};
+use crate::IsobusAddress;
+use alloc::vec;
 
 impl PDU {
     pub fn new_required_tractor_facilities(sa: IsobusAddress) -> PDU {
@@ -60,14 +60,13 @@ impl PDU {
             254,
             13,
             sa.into(),
-            vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], // TODO; implement
+            vec![0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], // TODO; implement
         )
     }
     pub fn is_working_set_master(&self) -> bool {
         self.pgn().is_working_set_master()
     }
 }
-
 
 impl PGN {
     pub const REQUIRED_TRACTOR_FACILITIES: PGN = PGN::new(0x00FE08);

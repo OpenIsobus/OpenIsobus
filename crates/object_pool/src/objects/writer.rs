@@ -115,6 +115,7 @@ impl Object {
                 Self::write_u8(&mut data, o.options);
                 Self::write_u16(&mut data, o.variable_reference);
                 Self::write_u8(&mut data, o.justification);
+                Self::write_u8(&mut data, o.value.len() as u8);
                 Self::write_string(&mut data, &o.value);
                 Self::write_u8(&mut data, o.enabled);
                 Self::write_u8(&mut data, o.macro_refs.len() as u8);
@@ -325,6 +326,7 @@ impl Object {
             Object::StringVariable(o) => {
                 Self::write_u16(&mut data, o.id);
                 Self::write_u8(&mut data, ObjectType::StringVariable);
+                Self::write_u16(&mut data, o.value.len() as u16);
                 Self::write_string(&mut data, &o.value);
             }
             Object::FontAttributes(o) => {
@@ -362,6 +364,7 @@ impl Object {
                 Self::write_u16(&mut data, o.id);
                 Self::write_u8(&mut data, ObjectType::InputAttributes);
                 Self::write_u8(&mut data, o.validation_type);
+                Self::write_u8(&mut data, o.validation_string.len() as u8);
                 Self::write_string(&mut data, &o.validation_string);
                 Self::write_u8(&mut data, o.macro_refs.len() as u8);
 
@@ -672,7 +675,6 @@ impl Object {
     }
     fn write_string(data: &mut Vec<u8>, val: impl Into<String>) {
         let val: String = val.into();
-        data.push(val.len() as u8);
         data.extend(val.as_bytes());
     }
     fn write_name(data: &mut Vec<u8>, val: impl Into<Name>) {

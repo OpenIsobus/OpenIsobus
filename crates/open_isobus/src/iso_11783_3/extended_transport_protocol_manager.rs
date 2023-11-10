@@ -144,7 +144,11 @@ impl ExtendedTransportProtocolManager {
         //         let packet_nr = data[0];
 
         //         for i in 0..7 {
-        //             self.receive_buffer[((packet_nr-1)*7+i) as usize] = data[(i+1) as usize];
+        //             let index = ((packet_nr - 1) * 7 + i) as usize;
+        //             if index >= self.receive_buffer.len() {
+        //                 break;
+        //             }
+        //             self.receive_buffer[index] = data[(i+1) as usize];
         //         }
 
         //         self.timeout_time = time + TP_TIMEOUT_T1;

@@ -299,6 +299,36 @@ impl PDU {
         self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::VTChangeNumericValue as u8
     }
 
+    /// Create a new `VT Change String Value command` PDU.
+    ///
+    /// VT Function = 8
+    pub fn new_vt_change_string_value_command(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: VTChangeStringValueCommand,
+    ) -> PDU {
+        PDU::new_vt_to_ecu(da, sa, data.into())
+    }
+    /// Check if `&self` is a `VT Change String Value command` PDU.
+    pub fn is_vt_change_string_value_command(&self) -> bool {
+        self.is_vt_to_ecu() && self.data::<1>()[0] == MessageType::VTChangeStringValue as u8
+    }
+
+    /// Create a new `VT Change String Value response` PDU.
+    ///
+    /// VT Function = 8
+    pub fn new_vt_change_string_value_response(
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        data: VTChangeStringValueResponse,
+    ) -> PDU {
+        PDU::new_ecu_to_vt(da, sa, data.into())
+    }
+    /// Check if `&self` is a `VT Change String Value response` PDU.
+    pub fn is_vt_change_string_value_response(&self) -> bool {
+        self.is_ecu_to_vt() && self.data::<1>()[0] == MessageType::VTChangeStringValue as u8
+    }
+
     /// Create a new `Change Numeric Value command` PDU.
     ///
     /// VT Function = 168
@@ -848,6 +878,86 @@ impl From<&[u8]> for VTChangeNumericValueResponse {
         dst
     }
 }
+
+/// Datastructure for [`MessageType::VTChangeStringValue`] commands.
+#[derive(Debug, Default)]
+pub struct VTChangeStringValueCommand {
+    pub id: ObjectId,
+    pub value: String,
+}
+impl From<VTChangeStringValueResponse> for VTChangeStringValueCommand {
+    fn from(src: VTChangeStringValueResponse) -> Self {
+        let mut dst = VTChangeStringValueCommand::default();
+        dst.id = src.id;
+        dst.value = src.value;
+        dst
+    }
+}
+impl From<VTChangeStringValueCommand> for Vec<u8> {
+    fn from(src: VTChangeStringValueCommand) -> Self {
+        let str_len = src.value.len();
+        let mut dst: Vec<u8> = vec![0xFF; core::cmp::max(8, 4 + str_len)];
+        dst[0] = MessageType::ChangeStringValue as u8;
+        dst[1..=2].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst[3] = str_len as u8;
+        dst[4..(4 + str_len)].copy_from_slice(src.value.as_bytes());
+        dst
+    }
+}
+impl From<&[u8]> for VTChangeStringValueCommand {
+    fn from(src: &[u8]) -> Self {
+        let mut dst = VTChangeStringValueCommand::default();
+        if let Some(val) = src.get(1..=2) {
+            dst.id = val.into();
+        }
+        if let Some(&len) = src.get(3) {
+            if let Some(val) = src.get(4..=(4 + len as usize)) {
+                for &c in val {
+                    dst.value.push(c as char);
+                }
+            }
+        }
+        dst
+    }
+}
+
+/// Datastructure for [`MessageType::VTChangeStringValue`] responses.
+#[derive(Debug, Default)]
+pub struct VTChangeStringValueResponse {
+    pub id: ObjectId,
+    pub value: String,
+}
+impl From<VTChangeStringValueCommand> for VTChangeStringValueResponse {
+    fn from(src: VTChangeStringValueCommand) -> Self {
+        let mut dst = VTChangeStringValueResponse::default();
+        dst.id = src.id;
+        dst.value = src.value;
+        dst
+    }
+}
+impl From<VTChangeStringValueResponse> for Vec<u8> {
+    fn from(src: VTChangeStringValueResponse) -> Self {
+        let mut dst: Vec<u8> = vec![0xFF; 8];
+        dst[0] = MessageType::VTChangeStringValue as u8;
+        dst[3..=4].copy_from_slice(&Vec::<u8>::from(src.id));
+        dst
+    }
+}
+// impl From<&[u8]> for VTChangeStringValueResponse {
+//     fn from(src: &[u8]) -> Self {
+//         let mut dst = VTChangeStringValueResponse::default();
+//         if let Some(val) = src.get(1..=2) {
+//             dst.id = val.into();
+//         }
+//         if let Some(&val) = src.get(3) {
+//             dst.error_code = val;
+//         }
+//         if let Some(val) = src.get(4..=7) {
+//             dst.value = u32::from_le_bytes([val[0], val[1], val[2], val[3]]);
+//         }
+//         dst
+//     }
+// }
 
 /// Datastructure for [`MessageType::ChangeNumericValue`] commands.
 #[derive(Debug, Default)]

@@ -140,12 +140,18 @@ impl TransportProtocolManager {
             let packet_nr = data[0];
 
             for i in 0..7 {
-                self.receive_buffer[((packet_nr - 1) * 7 + i) as usize] = data[(i + 1) as usize];
+                let index = ((packet_nr - 1) * 7 + i) as usize;
+                if index >= self.receive_buffer.len() {
+                    break;
+                }
+                self.receive_buffer[index] = data[(i + 1) as usize];
             }
 
             self.timeout_time = time + TP_TIMEOUT_T1;
 
             if self.receive_nr_of_packets == packet_nr {
+                let mut finished_pdu = None;
+
                 if let Some(pgn) = self.receive_pgn {
                     can.write(
                         PDU::new_tp_end_of_message_acknowledge(
@@ -157,9 +163,18 @@ impl TransportProtocolManager {
                         )
                         .into(),
                     );
+
+                    if pgn.is_vt_to_ecu() {
+                        finished_pdu = Some(PDU::new_vt_to_ecu(
+                            pdu.source_address(),
+                            claimed_address,
+                            self.receive_buffer.clone(),
+                        ))
+                    }
                 }
 
-                let finished_pdu = self.pdu_to_send.take();
+                // log::info!("{:#?}", finished_pdu);
+
                 self.close_connection();
 
                 return finished_pdu;

@@ -334,6 +334,22 @@ impl WorkingSet {
                     );
                 }
 
+                if pdu.is_vt_change_string_value_command() {
+                    let data: VTChangeStringValueCommand = pdu.data_raw().into();
+                    self.event_queue
+                        .push_back(EventType::StringValueChanged(data.id, data.value.clone()));
+
+                    // Send optional response.
+                    self.isobus.send(
+                        PDU::new_vt_change_string_value_response(
+                            self.connected_vt,
+                            self.isobus.claimed_address(),
+                            data.into(),
+                        ),
+                        time,
+                    );
+                }
+
                 continue;
             }
         }

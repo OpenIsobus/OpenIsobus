@@ -672,6 +672,7 @@ impl Object {
     }
     fn write_string(data: &mut Vec<u8>, val: impl Into<String>) {
         let val: String = val.into();
+        data.push(val.len() as u8);
         data.extend(val.as_bytes());
     }
     fn write_name(data: &mut Vec<u8>, val: impl Into<Name>) {

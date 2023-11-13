@@ -1,5 +1,8 @@
 use alloc::vec::Vec;
-use alloc::{string::String, vec};
+use alloc::{
+    string::{String, ToString},
+    vec,
+};
 
 use bitflags::bitflags;
 
@@ -911,10 +914,8 @@ impl From<&[u8]> for VTChangeStringValueCommand {
             dst.id = val.into();
         }
         if let Some(&len) = src.get(3) {
-            if let Some(val) = src.get(4..=(4 + len as usize)) {
-                for &c in val {
-                    dst.value.push(c as char);
-                }
+            if let Some(val) = src.get(4..=(4 + (len as usize - 1))) {
+                dst.value = String::from_utf8_lossy(val).trim().to_string();
             }
         }
         dst

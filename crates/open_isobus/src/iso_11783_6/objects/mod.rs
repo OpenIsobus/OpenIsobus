@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 
 use crate::{iso_11783_5::Name, iso_11783_6::ParseError};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ObjectType {
     WorkingSet = 0,
     DataMask = 1,
@@ -171,7 +171,7 @@ impl From<ObjectType> for u8 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Object {
     WorkingSet(WorkingSet),
     DataMask(DataMask),
@@ -356,12 +356,12 @@ impl From<ObjectId> for u16 {
         val.0
     }
 }
-impl From<[u8;2]> for ObjectId {
-    fn from(val: [u8;2]) -> Self {
+impl From<[u8; 2]> for ObjectId {
+    fn from(val: [u8; 2]) -> Self {
         ObjectId(u16::from_le_bytes(val))
     }
 }
-impl From<ObjectId> for [u8;2] {
+impl From<ObjectId> for [u8; 2] {
     fn from(val: ObjectId) -> Self {
         val.0.to_le_bytes()
     }
@@ -374,7 +374,7 @@ impl From<Vec<u8>> for ObjectId {
 }
 impl From<ObjectId> for Vec<u8> {
     fn from(val: ObjectId) -> Self {
-        let val: [u8;2] = val.into();
+        let val: [u8; 2] = val.into();
         val.to_vec()
     }
 }
@@ -387,7 +387,7 @@ impl From<&[u8]> for ObjectId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ObjectRef {
     pub id: ObjectId,
     pub offset: Point<i16>,
@@ -395,7 +395,7 @@ pub struct ObjectRef {
     // pub y: i16,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MacroRef {
     pub macro_id: u8,
     pub event_id: u8,
@@ -2010,7 +2010,7 @@ impl core::ops::Add<Point<i16>> for Point<u16> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ObjectLabel {
     pub id: ObjectId,
     pub string_variable_reference: ObjectId,
@@ -2018,11 +2018,7 @@ pub struct ObjectLabel {
     pub graphic_representation: ObjectId,
 }
 
-
-
-
-
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WorkingSet {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2033,7 +2029,7 @@ pub struct WorkingSet {
     pub language_codes: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DataMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2042,7 +2038,7 @@ pub struct DataMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AlarmMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2053,7 +2049,7 @@ pub struct AlarmMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Container {
     pub id: ObjectId,
     pub width: u16,
@@ -2063,7 +2059,7 @@ pub struct Container {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SoftKeyMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2071,7 +2067,7 @@ pub struct SoftKeyMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Key {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2080,7 +2076,7 @@ pub struct Key {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Button {
     pub id: ObjectId,
     pub width: u16,
@@ -2093,7 +2089,7 @@ pub struct Button {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputBoolean {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2105,7 +2101,7 @@ pub struct InputBoolean {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputString {
     pub id: ObjectId,
     pub width: u16,
@@ -2121,7 +2117,7 @@ pub struct InputString {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputNumber {
     pub id: ObjectId,
     pub width: u16,
@@ -2142,7 +2138,7 @@ pub struct InputNumber {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputList {
     pub id: ObjectId,
     pub width: u16,
@@ -2154,7 +2150,7 @@ pub struct InputList {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputString {
     pub id: ObjectId,
     pub width: u16,
@@ -2168,7 +2164,7 @@ pub struct OutputString {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputNumber {
     pub id: ObjectId,
     pub width: u16,
@@ -2186,7 +2182,7 @@ pub struct OutputNumber {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputList {
     pub id: ObjectId,
     pub width: u16,
@@ -2197,7 +2193,7 @@ pub struct OutputList {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputLine {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2207,7 +2203,7 @@ pub struct OutputLine {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputRectangle {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2218,7 +2214,7 @@ pub struct OutputRectangle {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputEllipse {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2231,7 +2227,7 @@ pub struct OutputEllipse {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputPolygon {
     pub id: ObjectId,
     pub width: u16,
@@ -2243,7 +2239,7 @@ pub struct OutputPolygon {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputMeter {
     pub id: ObjectId,
     pub width: u16,
@@ -2261,7 +2257,7 @@ pub struct OutputMeter {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputLinearBarGraph {
     pub id: ObjectId,
     pub width: u16,
@@ -2279,7 +2275,7 @@ pub struct OutputLinearBarGraph {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OutputArchedBarGraph {
     pub id: ObjectId,
     pub width: u16,
@@ -2299,7 +2295,7 @@ pub struct OutputArchedBarGraph {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PictureGraphic {
     pub id: ObjectId,
     pub width: u16,
@@ -2312,19 +2308,19 @@ pub struct PictureGraphic {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NumberVariable {
     pub id: ObjectId,
     pub value: u32,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct StringVariable {
     pub id: ObjectId,
     pub value: String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FontAttributes {
     pub id: ObjectId,
     pub font_colour: u8,
@@ -2334,7 +2330,7 @@ pub struct FontAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LineAttributes {
     pub id: ObjectId,
     pub line_colour: u8,
@@ -2343,7 +2339,7 @@ pub struct LineAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FillAttributes {
     pub id: ObjectId,
     pub fill_type: u8,
@@ -2352,7 +2348,7 @@ pub struct FillAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputAttributes {
     pub id: ObjectId,
     pub validation_type: u8,
@@ -2361,26 +2357,26 @@ pub struct InputAttributes {
 }
 
 // TODO; Implement code planes
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExtendedInputAttributes {
     pub id: ObjectId,
     pub validation_type: u8,
     pub nr_of_code_planes: u8,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ObjectPointer {
     pub id: ObjectId,
     pub value: ObjectId,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Macro {
     pub id: ObjectId,
     pub commands: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AuxiliaryFunctionType1 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2388,7 +2384,7 @@ pub struct AuxiliaryFunctionType1 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AuxiliaryInputType1 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2397,7 +2393,7 @@ pub struct AuxiliaryInputType1 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AuxiliaryFunctionType2 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2405,7 +2401,7 @@ pub struct AuxiliaryFunctionType2 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AuxiliaryInputType2 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2413,20 +2409,20 @@ pub struct AuxiliaryInputType2 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AuxiliaryControlDesignatorType2 {
     pub id: ObjectId,
     pub pointer_type: u8,
     pub auxiliary_object_id: ObjectId,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ColourMap {
     pub id: ObjectId,
     pub colour_map: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GraphicsContext {
     pub id: ObjectId,
     pub viewport_width: u16,
@@ -2448,7 +2444,7 @@ pub struct GraphicsContext {
     pub transparency_colour: u8,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WindowMask {
     pub id: ObjectId,
     pub width: u8,
@@ -2464,7 +2460,7 @@ pub struct WindowMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct KeyGroup {
     pub id: ObjectId,
     pub options: u8,
@@ -2474,13 +2470,13 @@ pub struct KeyGroup {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ObjectLabelReferenceList {
     pub id: ObjectId,
     pub object_labels: Vec<ObjectLabel>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExternalObjectDefinition {
     pub id: ObjectId,
     pub options: u8,
@@ -2488,14 +2484,14 @@ pub struct ExternalObjectDefinition {
     pub objects: Vec<ObjectId>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExternalReferenceName {
     pub id: ObjectId,
     pub options: u8,
     pub name: Name,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExternalObjectPointer {
     pub id: ObjectId,
     pub default_object_id: ObjectId,
@@ -2503,7 +2499,7 @@ pub struct ExternalObjectPointer {
     pub external_object_id: ObjectId,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Animation {
     pub id: ObjectId,
     pub width: u16,
@@ -2519,21 +2515,21 @@ pub struct Animation {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ColourPalette {
     pub id: ObjectId,
     pub options: u16,
     pub colours: Vec<Colour>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GraphicData {
     pub id: ObjectId,
     pub format: u8,
     pub data: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ScalesGraphic {
     pub id: ObjectId,
     pub width: u16,
@@ -2545,7 +2541,7 @@ pub struct ScalesGraphic {
 }
 
 // TODO; Implement language pairs
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WorkingSetSpecialControls {
     pub id: ObjectId,
     pub id_of_colour_map: ObjectId,

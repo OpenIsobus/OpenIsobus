@@ -63,11 +63,23 @@ impl ObjectPool {
         self.objects.push(obj);
     }
 
+    pub fn remove(&mut self, id: ObjectId) -> Option<Object> {
+        if let Some(index) = self.objects.iter().position(|o| o.id() == id) {
+            Some(self.objects.swap_remove(index))
+        } else {
+            None
+        }
+    }
+
     pub fn size(&mut self) -> u32 {
         match self.temp_size {
             Some(len) => len,
             None => self.as_iop().len() as u32,
         }
+    }
+
+    pub fn objects(&self) -> &Vec<Object> {
+        &self.objects
     }
 
     pub fn object_by_id(&self, id: ObjectId) -> Option<&Object> {

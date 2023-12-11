@@ -47,8 +47,7 @@ impl WorkingSet {
                     .industry_group(2) // Agricultural machinery
                     .device_class(25) // Slurry/Manure Applicators
                     .function(128) // Slurry/Manure Rate Control
-                    // .manufacturer_code(98) // Mueller
-                    .manufacturer_code(519) // Peeters Landbouwmachines b.v.
+                    .manufacturer_code(1407) // Open-Agriculture
                     .ecu_instance(1)
                     .build(),
             )

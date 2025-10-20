@@ -2,7 +2,7 @@ use alloc::{boxed::Box, collections::VecDeque, vec, vec::Vec};
 
 use crate::{drivers::CanDriverTrait, isobus::IsobusAddress};
 
-use super::{TpAbortReasons, PDU, PGN};
+use super::{PDU, PGN, TpAbortReasons};
 
 const TP_TIMEOUT_T1: u64 = 750;
 const TP_TIMEOUT_T2: u64 = 1250;

@@ -3,6 +3,7 @@ use alloc::{
     vec,
 };
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct LanguageSettings {
     language_code: String,
     decimal_symbol: DecimalSymbolEnum,
@@ -197,7 +198,7 @@ impl Default for LanguageSettingsBuilder {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DecimalSymbolEnum {
     Comma = 0,
     Point = 1,
@@ -226,7 +227,7 @@ impl From<DecimalSymbolEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DateFormatEnum {
     DMY = 0,
     DYM = 1,
@@ -263,7 +264,7 @@ impl From<DateFormatEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TimeFormatEnum {
     H24 = 0,
     H12 = 1,
@@ -292,7 +293,7 @@ impl From<TimeFormatEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DistanceUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -321,7 +322,7 @@ impl From<DistanceUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum AreaUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -350,7 +351,7 @@ impl From<AreaUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VolumeUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -379,7 +380,7 @@ impl From<VolumeUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MassUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -408,7 +409,7 @@ impl From<MassUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TemperatureUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -437,7 +438,7 @@ impl From<TemperatureUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PressureUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -466,7 +467,7 @@ impl From<PressureUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ForceUnitsEnum {
     Metric = 0,
     Imperial = 1,
@@ -495,7 +496,7 @@ impl From<ForceUnitsEnum> for u8 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnitsSystemEnum {
     Metric = 0,
     Imperial = 1,

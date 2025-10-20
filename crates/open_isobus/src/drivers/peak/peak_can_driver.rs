@@ -4,7 +4,7 @@ use {
         CanDriverTrait,
     },
     alloc::string::ToString,
-    pcan_basic::{
+    peakcan_basic::{
         bus::UsbBus,
         error::PcanError,
         socket::{usb::UsbCanSocket, MessageType, RecvCan, SendCan},
@@ -32,7 +32,7 @@ impl PeakCanDriver {
     }
 
     fn get_attached_channels(&self) {
-        let result = pcan_basic::hw::attached_channels();
+        let result = peakcan_basic::hw::attached_channels();
         match result {
             Ok(attached_channels) => {
                 for channel in attached_channels {
@@ -53,13 +53,23 @@ impl PeakCanDriver {
     }
 }
 
-impl CanDriverTrait for PeakCanDriver {
+impl<'a> CanDriverTrait<'a> for PeakCanDriver {
     fn init(&mut self) {}
 
-    fn open(&mut self, baudrate: Option<Baudrate>) {
+    fn open(&mut self, interface: &'a str, baudrate: Option<Baudrate>) {
         if self.socket.is_some() && self.baudrate == baudrate {
             return;
         }
+
+        log::info!("Opening PeakCanDriver on interface: {interface:?}");
+
+        let interface = match interface {
+            CanInterface::SocketCan(str) => match str {
+                "USB1" | "usb1" => UsbBus::USB1,
+                _ => UsbBus::USB1,
+            },
+            _ => UsbBus::USB1,
+        };
 
         let baudrate = baudrate.unwrap_or(Baudrate::Baud250K);
         self.baudrate = Some(baudrate);
@@ -108,7 +118,7 @@ impl CanDriverTrait for PeakCanDriver {
     }
 }
 
-impl From<CanFrame> for pcan_basic::socket::CanFrame {
+impl From<CanFrame> for peakcan_basic::socket::CanFrame {
     fn from(frame: CanFrame) -> Self {
         let message_type: MessageType = if frame.is_extended() {
             MessageType::Extended
@@ -120,8 +130,8 @@ impl From<CanFrame> for pcan_basic::socket::CanFrame {
     }
 }
 
-impl From<pcan_basic::socket::CanFrame> for CanFrame {
-    fn from(frame: pcan_basic::socket::CanFrame) -> Self {
+impl From<peakcan_basic::socket::CanFrame> for CanFrame {
+    fn from(frame: peakcan_basic::socket::CanFrame) -> Self {
         let id: Id = if frame.is_extended_frame() {
             Id::Extended(ExtendedId::new(frame.can_id()).unwrap_or(ExtendedId::MAX))
         } else {
@@ -165,13 +175,13 @@ impl From<PcanError> for CanError {
     }
 }
 
-impl From<Baudrate> for pcan_basic::socket::Baudrate {
-    fn from(value: Baudrate) -> pcan_basic::socket::Baudrate {
+impl From<Baudrate> for peakcan_basic::socket::Baudrate {
+    fn from(value: Baudrate) -> peakcan_basic::socket::Baudrate {
         match value {
-            Baudrate::Baud1M => pcan_basic::socket::Baudrate::Baud1M,
-            Baudrate::Baud500K => pcan_basic::socket::Baudrate::Baud500K,
-            Baudrate::Baud250K => pcan_basic::socket::Baudrate::Baud250K,
-            Baudrate::Baud125K => pcan_basic::socket::Baudrate::Baud125K,
+            Baudrate::Baud1M => peakcan_basic::socket::Baudrate::Baud1M,
+            Baudrate::Baud500K => peakcan_basic::socket::Baudrate::Baud500K,
+            Baudrate::Baud250K => peakcan_basic::socket::Baudrate::Baud250K,
+            Baudrate::Baud125K => peakcan_basic::socket::Baudrate::Baud125K,
         }
     }
 }

@@ -90,7 +90,7 @@ impl PDU {
         vec.push(number_of_packets);
         vec.push(0xFF);
         vec.extend_from_slice(&message_pgn.as_bytes());
-        PDU::new(7, 0, 0, 235, da.into(), sa.into(), vec)
+        PDU::new(7, 0, 0, 236, da.into(), sa.into(), vec)
     }
     pub fn is_tp_end_of_message_acknowledge(&self) -> bool {
         self.is_tp_connection_management() && self.data::<1>()[0] == 19

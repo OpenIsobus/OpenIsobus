@@ -5,6 +5,7 @@ pub struct PGN(u32);
 
 impl PGN {
     pub const REQUEST: PGN = PGN::new(0x00EA00);
+    pub const ACKNOWLEDGEMENT: PGN = PGN::new(0x00E800);
 
     pub const ADDRESS_CLAIMED: PGN = PGN::new(0x00EE00);
     pub const COMMANDED_ADDRESS: PGN = PGN::new(0x00FED8);
@@ -31,6 +32,9 @@ impl PGN {
 
     pub fn is_request(&self) -> bool {
         *self == PGN::REQUEST
+    }
+    pub fn is_acknowledgement(&self) -> bool {
+        *self == PGN::ACKNOWLEDGEMENT
     }
     pub fn is_address_claimed(&self) -> bool {
         *self == PGN::ADDRESS_CLAIMED

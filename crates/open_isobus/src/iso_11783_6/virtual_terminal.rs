@@ -2,14 +2,14 @@ use crate::{iso_11783_5::Name, Isobus, IsobusAddress};
 
 use super::ObjectPool;
 
-pub struct VirtualTerminal {
-    isobus: Isobus,
+pub struct VirtualTerminal<'a> {
+    isobus: Isobus<'a>,
     object_pool: Option<ObjectPool>,
 }
 
-impl VirtualTerminal {
-    pub fn new() -> Self {
-        let isobus = Isobus::builder()
+impl<'a> VirtualTerminal<'a> {
+    pub fn new(can_interface: &'a str) -> Self {
+        let isobus: Isobus<'a> = Isobus::builder()
             .name(
                 Name::builder()
                     .has_self_configurable_address(false) // Claim specific address
@@ -19,6 +19,7 @@ impl VirtualTerminal {
                     .build(),
             )
             .address_to_claim(IsobusAddress(38)) // Address for the in cab VT
+            .can_interface(can_interface)
             .build();
 
         Self {
@@ -36,8 +37,8 @@ impl VirtualTerminal {
     }
 }
 
-impl Default for VirtualTerminal {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl Default for VirtualTerminal<'_> {
+//     fn default() -> Self {
+//         Self::new("")
+//     }
+// }

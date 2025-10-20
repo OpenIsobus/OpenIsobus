@@ -1,41 +1,59 @@
-use core::fmt::Display;
+use core::fmt::{Display, LowerHex, UpperHex};
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 pub use crate::drivers::can_driver::CanFrame;
 pub use crate::drivers::CanDriver;
+use crate::iso_11783_3::PGN;
 use crate::iso_11783_5::NetworkManager;
 use crate::{
     iso_11783_3::{DataLinkLayer, PDU},
     iso_11783_5::Name,
 };
 
-pub struct Isobus {
+pub struct Isobus<'a> {
     _name: Name,
     _canbus_id: u8,
     address_to_claim: IsobusAddress,
 
     state: State,
-    dll: DataLinkLayer,
+    dll: DataLinkLayer<'a>,
     network_manager: NetworkManager,
 }
 
-impl Isobus {
+impl<'a> Isobus<'a> {
     pub const DEFAULT_ADDRESS: IsobusAddress = IsobusAddress(128);
 
-    pub fn builder() -> IsobusBuilder {
+    pub fn builder() -> IsobusBuilder<'a> {
         IsobusBuilder::default()
     }
 
     pub fn process(&mut self, time: u64) -> Vec<PDU> {
-        let pdus = self.dll.process(&self.network_manager, time);
+        let mut pdus = self.dll.process(&self.network_manager, time);
 
         if !self.is_connected() {
             self.connect(time);
         }
 
-        self.network_manager.process(&pdus, &mut self.dll, time);
+        self.network_manager.process(&mut pdus, &mut self.dll, time);
+
+        pdus.retain(|pdu| {
+            // Respond to all unsupported requests
+            if pdu.is_request() {
+                let response = PDU::new_acknowledgement(
+                    1,
+                    0xff,
+                    pdu.source_address(),
+                    self.network_manager.claimed_address(),
+                    PGN::from_le_bytes(pdu.data::<3>()),
+                );
+                self.send(response, time);
+                return false;
+            }
+
+            true
+        });
 
         pdus
     }
@@ -50,7 +68,7 @@ impl Isobus {
             .connect(&mut self.dll, Some(self.address_to_claim), time)
         {
             Ok(a) => {
-                log::info!("Isobus started with address 0x{:02X}", a.0);
+                log::info!("Isobus started with address {0} ({0:#02X})", a.0);
                 self.state = State::Connected;
             }
             Err(nb::Error::WouldBlock) => {
@@ -80,28 +98,30 @@ impl Isobus {
 }
 
 #[derive(Default)]
-pub struct IsobusBuilder {
+pub struct IsobusBuilder<'a> {
     name: Option<Name>,
     canbus_id: Option<u8>,
     address_to_claim: Option<IsobusAddress>,
+    can_interface: Option<&'a str>,
 }
 
-impl IsobusBuilder {
-    pub fn new() -> IsobusBuilder {
+impl<'a> IsobusBuilder<'a> {
+    pub fn new() -> IsobusBuilder<'a> {
         IsobusBuilder::default()
     }
 
-    pub fn build(&mut self) -> Isobus {
+    pub fn build(&mut self) -> Isobus<'a> {
         let name = self.name.unwrap_or_default();
         let canbus_id = self.canbus_id.unwrap_or_default();
         let address_to_claim = self.address_to_claim.unwrap_or_default();
+        let can_interface = self.can_interface.unwrap_or_default();
 
         Isobus {
             _name: name,
             _canbus_id: canbus_id,
             address_to_claim,
             state: State::Disconnected,
-            dll: DataLinkLayer::new(Box::new(CanDriver::new(canbus_id))),
+            dll: DataLinkLayer::new(can_interface, Box::new(CanDriver::new(canbus_id))),
             network_manager: NetworkManager::new(name),
         }
     }
@@ -120,6 +140,11 @@ impl IsobusBuilder {
         self.address_to_claim = Some(address);
         self
     }
+
+    pub fn can_interface(&mut self, can_interface: &'a str) -> &mut Self {
+        self.can_interface = Some(can_interface);
+        self
+    }
 }
 
 #[derive(PartialEq)]
@@ -128,7 +153,6 @@ enum State {
     Connecting,
     Connected,
 }
-
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct IsobusAddress(pub u8);
@@ -153,6 +177,16 @@ impl From<IsobusAddress> for u8 {
 }
 impl Display for IsobusAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
+        core::fmt::Display::fmt(&self.0, f)
+    }
+}
+impl LowerHex for IsobusAddress {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+impl UpperHex for IsobusAddress {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::UpperHex::fmt(&self.0, f)
     }
 }

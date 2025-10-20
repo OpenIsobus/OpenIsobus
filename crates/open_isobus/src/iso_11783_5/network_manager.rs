@@ -44,11 +44,12 @@ impl NetworkManager {
         }
     }
 
-    pub fn process(&mut self, pdus: &Vec<PDU>, dll: &mut DataLinkLayer, time: u64) {
-        for pdu in pdus {
+    pub fn process(&mut self, pdus: &mut Vec<PDU>, dll: &mut DataLinkLayer, time: u64) {
+        pdus.retain(|pdu| {
             // Request-for-address-claimed
             if pdu.is_request_for_address_claimed() && self.is_connected() {
                 self.send_address_claimed(dll, self.claimed_address(), time);
+                return false;
             }
 
             // Address-claimed
@@ -58,6 +59,7 @@ impl NetworkManager {
                     Name::from(pdu.data::<8>().as_slice()),
                     pdu.source_address(),
                 );
+                return false;
             }
 
             // Cannot-claim-source-address
@@ -71,7 +73,8 @@ impl NetworkManager {
             // }
 
             // log::debug!("{:?}", pdu);
-        }
+            true
+        });
     }
 
     pub fn connect(
@@ -98,8 +101,10 @@ impl NetworkManager {
                     return Err(nb::Error::WouldBlock);
                 }
 
+                self.log_network(); // TODO, for debugging
+
                 // TODO, create an IsobusAddress Iterator
-                for i in (self.address_to_claim.0..=247).chain(128..self.address_to_claim.0) {
+                for i in (self.address_to_claim.0..=235).chain(128..self.address_to_claim.0) {
                     let address = IsobusAddress(i);
                     if !self.network_nodes.values().any(|&a| a == address) {
                         self.address_to_claim = address;
@@ -169,12 +174,12 @@ impl NetworkManager {
         time: u64,
     ) {
         dll.send(PDU::new_request_for_address_claimed(da, sa), time);
-        // log::debug!("Sending; request_for_address_claimed");
+        log::debug!("Sending; request_for_address_claimed");
     }
 
     fn send_address_claimed(&mut self, dll: &mut DataLinkLayer, address: IsobusAddress, time: u64) {
         dll.send(PDU::new_address_claimed(self.name, address), time);
-        // log::debug!("Sending; address_claimed");
+        log::debug!("Sending; address_claimed 0x{:02X?}", address.0);
     }
 
     fn update_network_nodes(&mut self, name: Name, source_address: IsobusAddress) {

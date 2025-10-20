@@ -400,8 +400,8 @@ impl Object {
                     width: Self::read_u16(data)?,
                     actual_width: Self::read_u16(data)?,
                     actual_height: Self::read_u16(data)?,
-                    format: Self::read_u8(data)?,
-                    options: Self::read_u8(data)?,
+                    format: Self::read_u8(data)?.into(),
+                    options: Self::read_u8(data)?.into(),
                     transparency_colour: Self::read_u8(data)?,
                     data: Vec::with_capacity(Self::read_u32(data)? as usize),
                     macro_refs: Vec::with_capacity(Self::read_u8(data)?.into()),
@@ -774,8 +774,8 @@ impl Object {
 
                 Ok(Object::WorkingSetSpecialControls(o))
             }
-            ObjectType::ScalesGraphic => {
-                let mut o = ScalesGraphic {
+            ObjectType::ScaledGraphic => {
+                let mut o = ScaledGraphic {
                     id,
                     width: Self::read_u16(data)?,
                     height: Self::read_u16(data)?,
@@ -788,7 +788,7 @@ impl Object {
                 o.macro_refs
                     .extend(Self::read_macro_refs(data, o.macro_refs.capacity())?);
 
-                Ok(Object::ScalesGraphic(o))
+                Ok(Object::ScaledGraphic(o))
             }
         }
     }

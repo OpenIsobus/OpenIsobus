@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq)]
 pub enum MessageType {
     SoftKeyActivation = 0,

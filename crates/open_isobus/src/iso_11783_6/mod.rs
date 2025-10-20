@@ -1,12 +1,21 @@
 use alloc::vec::Vec;
 
+pub mod attributes;
+pub use attributes::Attribute;
+pub use attributes::AttributeId;
+
 pub mod objects;
 pub use objects::Object;
+
+#[cfg(feature = "renderer")]
+pub mod renderer;
 
 pub mod pdu;
 
 pub mod object_pool;
 pub use object_pool::ObjectPool;
+// pub mod object_pool_new;
+// pub use object_pool_new::ObjectPool;
 
 pub mod virtual_terminal;
 pub use virtual_terminal::VirtualTerminal;
@@ -14,18 +23,14 @@ pub mod working_set;
 pub use working_set::WorkingSet;
 
 use crate::{
-    iso_11783_3::{PDU, PGN},
     IsobusAddress,
+    iso_11783_3::{PDU, PGN},
 };
 
 pub mod messages;
 pub use self::messages::MessageType;
 pub mod events;
 pub use self::events::EventType;
-
-pub enum ParseError {
-    DataEmpty,
-}
 
 impl PDU {
     pub fn new_vt_to_ecu(da: IsobusAddress, sa: IsobusAddress, data: Vec<u8>) -> PDU {

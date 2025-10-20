@@ -11,9 +11,9 @@ mod mock;
 #[cfg(any(feature = "mock_can_driver"))]
 pub use mock::CanDriver;
 
-#[cfg(all(target_family = "unix", feature = "socket_can_driver"))]
+#[cfg(any(feature = "socket_can_driver"))]
 mod socket;
-#[cfg(all(target_family = "unix", feature = "socket_can_driver"))]
+#[cfg(any(feature = "socket_can_driver"))]
 pub use socket::CanDriver;
 
 // #[cfg_attr(feature = "peak_can_driver", path = "peak")]

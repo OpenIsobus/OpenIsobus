@@ -55,6 +55,7 @@ pub enum ObjectType {
     GraphicData = 46,
     WorkingSetSpecialControls = 47,
     ScalesGraphic = 48,
+    // ManufacturerDefined(ManufacturerDefinedObjectType),
 }
 
 impl From<u8> for ObjectType {

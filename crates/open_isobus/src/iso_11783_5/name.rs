@@ -1,8 +1,9 @@
 use core::fmt::Debug;
 
 use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct Name {
     value: u64,
 }
@@ -50,15 +51,30 @@ impl Debug for Name {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Name")
             // .field("raw value", &format_args!("{:064b}", self.value))
-            .field("has_self_configurable_address", &format_args!("{}", self.has_self_configurable_address()))
+            .field(
+                "has_self_configurable_address",
+                &format_args!("{}", self.has_self_configurable_address()),
+            )
             .field("industry_group", &format_args!("{}", self.industry_group()))
-            .field("device_class_instance", &format_args!("{}", self.device_class_instance()))
+            .field(
+                "device_class_instance",
+                &format_args!("{}", self.device_class_instance()),
+            )
             .field("device_class", &format_args!("{}", self.device_class()))
             .field("function", &format_args!("{}", self.function()))
-            .field("function_instance", &format_args!("{}", self.function_instance()))
+            .field(
+                "function_instance",
+                &format_args!("{}", self.function_instance()),
+            )
             .field("ecu_instance", &format_args!("{}", self.ecu_instance()))
-            .field("manufacturer_code", &format_args!("{}", self.manufacturer_code()))
-            .field("identity_number", &format_args!("{}", self.identity_number()))
+            .field(
+                "manufacturer_code",
+                &format_args!("{}", self.manufacturer_code()),
+            )
+            .field(
+                "identity_number",
+                &format_args!("{}", self.identity_number()),
+            )
             .finish()
     }
 }

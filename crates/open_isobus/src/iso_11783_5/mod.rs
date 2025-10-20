@@ -4,6 +4,10 @@ pub mod network_manager;
 pub use name::Name;
 pub use network_manager::NetworkManager;
 
+// pub mod new_network_manager;
+// pub use new_network_manager::NetworkManagerTrait;
+// pub use new_network_manager::NetworkManagerState;
+
 use crate::{
     iso_11783_3::{PDU, PGN},
     isobus::IsobusAddress,

@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 
 use super::PGN;
 
-pub struct PduPriority(u8);
+// pub struct PduPriority(u8);
 
 #[derive(Clone, Debug)]
 pub struct PDU {
@@ -138,6 +138,28 @@ impl PDU {
 
     pub fn new_request(da: IsobusAddress, sa: IsobusAddress, pgn: PGN) -> PDU {
         PDU::new(6, 0, 0, 234, da.into(), sa.into(), pgn.as_bytes().to_vec())
+    }
+    pub fn is_request(&self) -> bool {
+        self.pgn().is_request()
+    }
+    pub fn new_acknowledgement(
+        control_byte: u8,
+        group_function_value: u8,
+        da: IsobusAddress,
+        sa: IsobusAddress,
+        pgn: PGN,
+    ) -> PDU {
+        let mut vec = Vec::new();
+        vec.push(control_byte);
+        vec.push(group_function_value);
+        vec.push(0xFF);
+        vec.push(0xFF);
+        vec.push(da.into());
+        vec.extend_from_slice(&pgn.as_bytes());
+        PDU::new(6, 0, 0, 232, da.into(), sa.into(), vec)
+    }
+    pub fn is_acknowledgement(&self) -> bool {
+        self.pgn().is_acknowledgement()
     }
     // pub fn new_bam(da: IsobusAddress, sa: IsobusAddress, pgn: PGN) -> PDU {
     //     PDU::new(6, 0, 0, 234, da.into(), sa.into(), pgn.as_bytes().to_vec())

@@ -309,8 +309,8 @@ impl Object {
                 Self::write_u16(&mut data, o.width);
                 Self::write_u16(&mut data, o.actual_width);
                 Self::write_u16(&mut data, o.actual_height);
-                Self::write_u8(&mut data, o.format);
-                Self::write_u8(&mut data, o.options);
+                Self::write_u8(&mut data, o.format as u8);
+                Self::write_u8(&mut data, o.options.bits());
                 Self::write_u8(&mut data, o.transparency_colour);
                 Self::write_u32(&mut data, o.data.len() as u32);
                 Self::write_u8(&mut data, o.macro_refs.len() as u8);
@@ -576,9 +576,9 @@ impl Object {
 
                 Self::write_language_pairs(&mut data, &o.language_pairs);
             }
-            Object::ScalesGraphic(o) => {
+            Object::ScaledGraphic(o) => {
                 Self::write_u16(&mut data, o.id);
-                Self::write_u8(&mut data, ObjectType::ScalesGraphic);
+                Self::write_u8(&mut data, ObjectType::ScaledGraphic);
                 Self::write_u16(&mut data, o.width);
                 Self::write_u16(&mut data, o.height);
                 Self::write_u8(&mut data, o.scale_type);

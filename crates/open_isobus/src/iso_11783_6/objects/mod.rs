@@ -1,9 +1,16 @@
-pub mod reader;
-pub mod writer;
+use bitflags::bitflags;
+
+pub mod iop;
+pub mod json;
 
 use alloc::{string::String, vec::Vec};
+use serde::{Deserialize, Serialize};
 
-use crate::{iso_11783_5::Name, iso_11783_6::ParseError};
+use crate::iso_11783_5::Name;
+
+pub enum ParseError {
+    DataEmpty,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ObjectType {
@@ -55,7 +62,7 @@ pub enum ObjectType {
     ColourPalette = 45,
     GraphicData = 46,
     WorkingSetSpecialControls = 47,
-    ScalesGraphic = 48,
+    ScaledGraphic = 48,
 }
 
 impl From<u8> for ObjectType {
@@ -109,7 +116,7 @@ impl From<u8> for ObjectType {
             45 => Self::ColourPalette,
             46 => Self::GraphicData,
             47 => Self::WorkingSetSpecialControls,
-            48 => Self::ScalesGraphic,
+            48 => Self::ScaledGraphic,
             _ => unimplemented!(),
         }
     }
@@ -117,57 +124,7 @@ impl From<u8> for ObjectType {
 
 impl From<ObjectType> for u8 {
     fn from(val: ObjectType) -> Self {
-        match val {
-            ObjectType::WorkingSet => 0,
-            ObjectType::DataMask => 1,
-            ObjectType::AlarmMask => 2,
-            ObjectType::Container => 3,
-            ObjectType::SoftKeyMask => 4,
-            ObjectType::Key => 5,
-            ObjectType::Button => 6,
-            ObjectType::InputBoolean => 7,
-            ObjectType::InputString => 8,
-            ObjectType::InputNumber => 9,
-            ObjectType::InputList => 10,
-            ObjectType::OutputString => 11,
-            ObjectType::OutputNumber => 12,
-            ObjectType::OutputLine => 13,
-            ObjectType::OutputRectangle => 14,
-            ObjectType::OutputEllipse => 15,
-            ObjectType::OutputPolygon => 16,
-            ObjectType::OutputMeter => 17,
-            ObjectType::OutputLinearBarGraph => 18,
-            ObjectType::OutputArchedBarGraph => 19,
-            ObjectType::PictureGraphic => 20,
-            ObjectType::NumberVariable => 21,
-            ObjectType::StringVariable => 22,
-            ObjectType::FontAttributes => 23,
-            ObjectType::LineAttributes => 24,
-            ObjectType::FillAttributes => 25,
-            ObjectType::InputAttributes => 26,
-            ObjectType::ObjectPointer => 27,
-            ObjectType::Macro => 28,
-            ObjectType::AuxiliaryFunctionType1 => 29,
-            ObjectType::AuxiliaryInputType1 => 30,
-            ObjectType::AuxiliaryFunctionType2 => 31,
-            ObjectType::AuxiliaryInputType2 => 32,
-            ObjectType::AuxiliaryControlDesignatorType2 => 33,
-            ObjectType::WindowMask => 34,
-            ObjectType::KeyGroup => 35,
-            ObjectType::GraphicsContext => 36,
-            ObjectType::OutputList => 37,
-            ObjectType::ExtendedInputAttributes => 38,
-            ObjectType::ColourMap => 39,
-            ObjectType::ObjectLabelReferenceList => 40,
-            ObjectType::ExternalObjectDefinition => 41,
-            ObjectType::ExternalReferenceName => 42,
-            ObjectType::ExternalObjectPointer => 43,
-            ObjectType::Animation => 44,
-            ObjectType::ColourPalette => 45,
-            ObjectType::GraphicData => 46,
-            ObjectType::WorkingSetSpecialControls => 47,
-            ObjectType::ScalesGraphic => 48,
-        }
+        val as u8
     }
 }
 
@@ -221,7 +178,7 @@ pub enum Object {
     ColourPalette(ColourPalette),
     GraphicData(GraphicData),
     WorkingSetSpecialControls(WorkingSetSpecialControls),
-    ScalesGraphic(ScalesGraphic),
+    ScaledGraphic(ScaledGraphic),
 }
 
 impl Object {
@@ -275,7 +232,7 @@ impl Object {
             Object::ColourPalette(o) => o.id,
             Object::GraphicData(o) => o.id,
             Object::WorkingSetSpecialControls(o) => o.id,
-            Object::ScalesGraphic(o) => o.id,
+            Object::ScaledGraphic(o) => o.id,
         }
     }
 
@@ -331,15 +288,19 @@ impl Object {
             Object::ColourPalette(_) => ObjectType::ColourPalette,
             Object::GraphicData(_) => ObjectType::GraphicData,
             Object::WorkingSetSpecialControls(_) => ObjectType::WorkingSetSpecialControls,
-            Object::ScalesGraphic(_) => ObjectType::ScalesGraphic,
+            Object::ScaledGraphic(_) => ObjectType::ScaledGraphic,
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ObjectId(u16);
 impl ObjectId {
     pub const NULL: ObjectId = ObjectId(0xFFFF);
+
+    pub const fn new(object_id: u16) -> ObjectId {
+        ObjectId(object_id)
+    }
 }
 impl Default for ObjectId {
     fn default() -> Self {
@@ -387,7 +348,7 @@ impl From<&[u8]> for ObjectId {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectRef {
     pub id: ObjectId,
     pub offset: Point<i16>,
@@ -395,18 +356,24 @@ pub struct ObjectRef {
     // pub y: i16,
 }
 
-#[derive(Clone, Debug)]
+impl ObjectRef {
+    pub fn new(id: ObjectId, offset: Point<i16>) -> Self {
+        Self { id, offset }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct MacroRef {
     pub macro_id: u8,
     pub event_id: u8,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Colour {
-    pub a: u8,
     pub r: u8,
     pub g: u8,
     pub b: u8,
+    pub a: u8,
 }
 
 impl Colour {
@@ -435,1543 +402,264 @@ impl Colour {
     pub const YELLOW: Colour = Colour::COLOUR_PALETTE[14];
     pub const NAVY: Colour = Colour::COLOUR_PALETTE[15];
 
+    #[rustfmt::skip]
     pub const COLOUR_PALETTE: [Colour; 256] = [
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x33,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x66,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x99,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xCC,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x00,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x33,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x66,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0x99,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xCC,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0x33,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0x66,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0x99,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0xCC,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0xFF,
-            g: 0xFF,
-            b: 0xFF,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
-        Colour {
-            r: 0x00,
-            g: 0x00,
-            b: 0x00,
-            a: 0xFF,
-        },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0x00, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0x33, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0x66, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0x99, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0xCC, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0x00, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0x33, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0x66, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0x99, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0xCC, b: 0xFF, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0x00, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0x33, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0x66, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0x99, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0xCC, a: 0xFF },
+        Colour { r: 0xFF, g: 0xFF, b: 0xFF, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
+        Colour { r: 0x00, g: 0x00, b: 0x00, a: 0xFF },
     ];
 }
 
@@ -1993,10 +681,21 @@ impl From<u32> for Colour {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Point<T> {
     pub x: T,
     pub y: T,
+}
+
+impl<T: core::ops::Add<Output = T>> core::ops::Add for Point<T> {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
 }
 
 impl core::ops::Add<Point<i16>> for Point<u16> {
@@ -2010,7 +709,7 @@ impl core::ops::Add<Point<i16>> for Point<u16> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectLabel {
     pub id: ObjectId,
     pub string_variable_reference: ObjectId,
@@ -2018,7 +717,7 @@ pub struct ObjectLabel {
     pub graphic_representation: ObjectId,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorkingSet {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2029,7 +728,7 @@ pub struct WorkingSet {
     pub language_codes: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DataMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2038,7 +737,7 @@ pub struct DataMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AlarmMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2049,7 +748,7 @@ pub struct AlarmMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Container {
     pub id: ObjectId,
     pub width: u16,
@@ -2059,7 +758,7 @@ pub struct Container {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SoftKeyMask {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2067,7 +766,7 @@ pub struct SoftKeyMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Key {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2076,7 +775,7 @@ pub struct Key {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Button {
     pub id: ObjectId,
     pub width: u16,
@@ -2089,7 +788,7 @@ pub struct Button {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InputBoolean {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2101,7 +800,7 @@ pub struct InputBoolean {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InputString {
     pub id: ObjectId,
     pub width: u16,
@@ -2117,7 +816,7 @@ pub struct InputString {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InputNumber {
     pub id: ObjectId,
     pub width: u16,
@@ -2138,7 +837,7 @@ pub struct InputNumber {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InputList {
     pub id: ObjectId,
     pub width: u16,
@@ -2150,7 +849,7 @@ pub struct InputList {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputString {
     pub id: ObjectId,
     pub width: u16,
@@ -2164,7 +863,7 @@ pub struct OutputString {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputNumber {
     pub id: ObjectId,
     pub width: u16,
@@ -2182,7 +881,7 @@ pub struct OutputNumber {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputList {
     pub id: ObjectId,
     pub width: u16,
@@ -2193,7 +892,7 @@ pub struct OutputList {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputLine {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2203,7 +902,7 @@ pub struct OutputLine {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputRectangle {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2214,7 +913,7 @@ pub struct OutputRectangle {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputEllipse {
     pub id: ObjectId,
     pub line_attributes: ObjectId,
@@ -2227,7 +926,7 @@ pub struct OutputEllipse {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputPolygon {
     pub id: ObjectId,
     pub width: u16,
@@ -2239,7 +938,7 @@ pub struct OutputPolygon {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputMeter {
     pub id: ObjectId,
     pub width: u16,
@@ -2257,7 +956,7 @@ pub struct OutputMeter {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputLinearBarGraph {
     pub id: ObjectId,
     pub width: u16,
@@ -2275,7 +974,7 @@ pub struct OutputLinearBarGraph {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OutputArchedBarGraph {
     pub id: ObjectId,
     pub width: u16,
@@ -2295,32 +994,65 @@ pub struct OutputArchedBarGraph {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PictureGraphicFormat {
+    Monochrome = 0,
+    Colour4Bit = 1,
+    Colour8Bit = 2,
+}
+
+impl From<u8> for PictureGraphicFormat {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => PictureGraphicFormat::Monochrome,
+            1 => PictureGraphicFormat::Colour4Bit,
+            2 => PictureGraphicFormat::Colour8Bit,
+            _ => PictureGraphicFormat::Colour8Bit,
+        }
+    }
+}
+
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    pub struct PictureGraphicOptions: u8 {
+        const Transparent = 0b00000001;
+        const Flashing = 0b00000010;
+        const RunLengthEncoded = 0b00000100;
+    }
+}
+
+impl From<u8> for PictureGraphicOptions {
+    fn from(value: u8) -> Self {
+        PictureGraphicOptions::from_bits_truncate(value)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PictureGraphic {
     pub id: ObjectId,
     pub width: u16,
     pub actual_width: u16,
     pub actual_height: u16,
-    pub format: u8,
-    pub options: u8,
+    pub format: PictureGraphicFormat,
+    pub options: PictureGraphicOptions,
     pub transparency_colour: u8,
     pub data: Vec<u8>,
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NumberVariable {
     pub id: ObjectId,
     pub value: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StringVariable {
     pub id: ObjectId,
     pub value: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FontAttributes {
     pub id: ObjectId,
     pub font_colour: u8,
@@ -2330,7 +1062,7 @@ pub struct FontAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LineAttributes {
     pub id: ObjectId,
     pub line_colour: u8,
@@ -2339,7 +1071,7 @@ pub struct LineAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FillAttributes {
     pub id: ObjectId,
     pub fill_type: u8,
@@ -2348,7 +1080,7 @@ pub struct FillAttributes {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct InputAttributes {
     pub id: ObjectId,
     pub validation_type: u8,
@@ -2357,26 +1089,26 @@ pub struct InputAttributes {
 }
 
 // TODO; Implement code planes
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExtendedInputAttributes {
     pub id: ObjectId,
     pub validation_type: u8,
     pub nr_of_code_planes: u8,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectPointer {
     pub id: ObjectId,
     pub value: ObjectId,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Macro {
     pub id: ObjectId,
     pub commands: Vec<u8>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuxiliaryFunctionType1 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2384,7 +1116,7 @@ pub struct AuxiliaryFunctionType1 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuxiliaryInputType1 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2393,7 +1125,7 @@ pub struct AuxiliaryInputType1 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuxiliaryFunctionType2 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2401,7 +1133,7 @@ pub struct AuxiliaryFunctionType2 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuxiliaryInputType2 {
     pub id: ObjectId,
     pub background_colour: u8,
@@ -2409,20 +1141,20 @@ pub struct AuxiliaryInputType2 {
     pub object_refs: Vec<ObjectRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuxiliaryControlDesignatorType2 {
     pub id: ObjectId,
     pub pointer_type: u8,
     pub auxiliary_object_id: ObjectId,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ColourMap {
     pub id: ObjectId,
     pub colour_map: Vec<u8>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphicsContext {
     pub id: ObjectId,
     pub viewport_width: u16,
@@ -2444,7 +1176,7 @@ pub struct GraphicsContext {
     pub transparency_colour: u8,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WindowMask {
     pub id: ObjectId,
     pub width: u8,
@@ -2460,7 +1192,7 @@ pub struct WindowMask {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KeyGroup {
     pub id: ObjectId,
     pub options: u8,
@@ -2470,13 +1202,13 @@ pub struct KeyGroup {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ObjectLabelReferenceList {
     pub id: ObjectId,
     pub object_labels: Vec<ObjectLabel>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExternalObjectDefinition {
     pub id: ObjectId,
     pub options: u8,
@@ -2484,14 +1216,14 @@ pub struct ExternalObjectDefinition {
     pub objects: Vec<ObjectId>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExternalReferenceName {
     pub id: ObjectId,
     pub options: u8,
     pub name: Name,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExternalObjectPointer {
     pub id: ObjectId,
     pub default_object_id: ObjectId,
@@ -2499,7 +1231,7 @@ pub struct ExternalObjectPointer {
     pub external_object_id: ObjectId,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Animation {
     pub id: ObjectId,
     pub width: u16,
@@ -2515,22 +1247,22 @@ pub struct Animation {
     pub macro_refs: Vec<MacroRef>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ColourPalette {
     pub id: ObjectId,
     pub options: u16,
     pub colours: Vec<Colour>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphicData {
     pub id: ObjectId,
     pub format: u8,
     pub data: Vec<u8>,
 }
 
-#[derive(Clone, Debug)]
-pub struct ScalesGraphic {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ScaledGraphic {
     pub id: ObjectId,
     pub width: u16,
     pub height: u16,
@@ -2541,7 +1273,7 @@ pub struct ScalesGraphic {
 }
 
 // TODO; Implement language pairs
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WorkingSetSpecialControls {
     pub id: ObjectId,
     pub id_of_colour_map: ObjectId,

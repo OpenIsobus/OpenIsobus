@@ -5,18 +5,13 @@ use {
     },
     alloc::string::ToString,
     socketcan::{
-        CANError,
-        // CANFrame,
-        CANSocket,
-    }, // pcan_basic::{
-       //     bus::UsbBus,
-       //     error::PcanError,
-       //     socket::{usb::UsbCanSocket, MessageType, RecvCan, SendCan},
-       // },
+        CanDataFrame, CanError as SocketCanError, CanFrame as SocketCanFrame, CanSocket,
+        EmbeddedFrame, Socket, SocketOptions,
+    },
 };
 
 pub struct SocketCanDriver {
-    socket: Option<CANSocket>,
+    socket: Option<CanSocket>,
     baudrate: Option<Baudrate>,
 }
 
@@ -28,7 +23,7 @@ impl SocketCanDriver {
         }
     }
 
-    fn socket(&self) -> Option<&CANSocket> {
+    fn socket(&self) -> Option<&CanSocket> {
         if self.socket.is_none() {
             log::error!("Socket CAN driver not open");
         }
@@ -36,24 +31,27 @@ impl SocketCanDriver {
     }
 }
 #[cfg(feature = "socket_can_driver")]
-impl CanDriverTrait for SocketCanDriver {
+impl<'a> CanDriverTrait<'a> for SocketCanDriver {
     fn init(&mut self) {}
 
-    fn open(&mut self, baudrate: Option<Baudrate>) {
+    fn open(&mut self, interface: &'a str, baudrate: Option<Baudrate>) {
         if self.socket.is_some() && self.baudrate == baudrate {
             return;
         }
 
+        log::info!("Opening SocketCan on interface: {interface:?}");
+
         let baudrate = baudrate.unwrap_or(Baudrate::Baud250K);
         self.baudrate = Some(baudrate);
 
-        self.socket = match CANSocket::open("can0") {
+        self.socket = match CanSocket::open(interface) {
             Ok(socket) => {
                 socket.set_nonblocking(true).unwrap();
+                socket.set_loopback(true).unwrap();
                 Some(socket)
             }
             Err(e) => {
-                log::error!("Unable to open Socket CAN driver: \"{e:?}\"");
+                log::error!("Unable to open Socket CAN driver: {e:?}");
                 None
             }
         };
@@ -70,7 +68,10 @@ impl CanDriverTrait for SocketCanDriver {
         };
 
         match socket.read_frame() {
-            Ok(f) => Some(f.into()),
+            Ok(f) => match f {
+                SocketCanFrame::Data(f) => Some(CanFrame::from(f)),
+                _ => None,
+            },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => None,
             Err(e) => {
                 log::error!("Unable to read CAN frame: \"{e:?}\"");
@@ -88,67 +89,76 @@ impl CanDriverTrait for SocketCanDriver {
             None => return,
         };
 
-        if let Err(e) = socket.write_frame(&(frame.into())) {
+        // NOTE: Blocking write to prevent OS error 11 "Resource temporarily unavailable"
+        if let Err(e) = socket.write_frame_insist(&CanDataFrame::from(frame)) {
             log::error!("Unable to write CAN frame: \"{e:?}\"");
         }
     }
 }
 
-impl From<CanFrame> for socketcan::CANFrame {
+impl From<CanFrame> for CanDataFrame {
     fn from(frame: CanFrame) -> Self {
-        // let message_type: MessageType = if frame.is_extended() {
-        //     MessageType::Extended
-        // } else {
-        //     MessageType::Standard
-        // };
-
-        Self::new(frame.id().as_raw(), frame.data(), false, false).unwrap()
+        socketcan::CanDataFrame::new(
+            socketcan::ExtendedId::new(frame.id().as_raw()).unwrap(), // TODO remove unwrap
+            frame.data(),
+        )
+        .unwrap()
     }
 }
 
-impl From<socketcan::CANFrame> for CanFrame {
-    fn from(frame: socketcan::CANFrame) -> Self {
-        let id: Id = if frame.is_extended() {
-            Id::Extended(ExtendedId::new(frame.id()).unwrap_or(ExtendedId::MAX))
-        } else {
-            Id::Standard(StandardId::new(frame.id()).unwrap_or(StandardId::MAX))
+impl From<CanDataFrame> for CanFrame {
+    fn from(frame: CanDataFrame) -> Self {
+        let id: Id = match frame.id() {
+            socketcan::Id::Standard(id) => {
+                Id::Standard(StandardId::new(id.as_raw()).unwrap_or(StandardId::MAX))
+            }
+            socketcan::Id::Extended(id) => {
+                Id::Extended(ExtendedId::new(id.as_raw()).unwrap_or(ExtendedId::MAX))
+            }
         };
 
         Self::new(id, frame.data())
     }
 }
 
-impl From<CANError> for CanError {
-    fn from(e: CANError) -> Self {
+impl From<SocketCanError> for CanError {
+    fn from(e: SocketCanError) -> Self {
         match e {
-            CANError::TransmitTimeout => CanError::Other("CANError::TransmitTimeout".to_string()),
-            CANError::LostArbitration(_) => {
+            SocketCanError::TransmitTimeout => {
+                CanError::Other("CANError::TransmitTimeout".to_string())
+            }
+            SocketCanError::LostArbitration(_) => {
                 CanError::Other("CANError::LostArbitration".to_string())
             }
-            CANError::ControllerProblem(_) => {
+            SocketCanError::ControllerProblem(_) => {
                 CanError::Other("CANError::ControllerProblem".to_string())
             }
-            CANError::ProtocolViolation {
+            SocketCanError::ProtocolViolation {
                 vtype: _vtype,
                 location: _location,
             } => CanError::Other("CANError::ProtocolViolation".to_string()),
-            CANError::TransceiverError => CanError::Other("CANError::TransceiverError".to_string()),
-            CANError::NoAck => CanError::Other("CANError::NoAck".to_string()),
-            CANError::BusOff => CanError::Other("CANError::BusOff".to_string()),
-            CANError::BusError => CanError::Other("CANError::BusError".to_string()),
-            CANError::Restarted => CanError::Other("CANError::Restarted".to_string()),
-            CANError::Unknown(_) => CanError::Other("CANError::Unknown".to_string()),
+            SocketCanError::TransceiverError => {
+                CanError::Other("CANError::TransceiverError".to_string())
+            }
+            SocketCanError::NoAck => CanError::Other("CANError::NoAck".to_string()),
+            SocketCanError::BusOff => CanError::Other("CANError::BusOff".to_string()),
+            SocketCanError::BusError => CanError::Other("CANError::BusError".to_string()),
+            SocketCanError::Restarted => CanError::Other("CANError::Restarted".to_string()),
+            SocketCanError::DecodingFailure(_) => {
+                CanError::Other("CANError::DecodingFailure".to_string())
+            }
+            SocketCanError::Unknown(_) => CanError::Other("CANError::Unknown".to_string()),
         }
     }
 }
 
 // impl From<Baudrate> for socketcan::Baudrate {
-//     fn from(value: Baudrate) -> pcan_basic::socket::Baudrate {
+//     fn from(value: Baudrate) -> peakcan_basic::socket::Baudrate {
 //         match value {
-//             Baudrate::Baud1M => pcan_basic::socket::Baudrate::Baud1M,
-//             Baudrate::Baud500K => pcan_basic::socket::Baudrate::Baud500K,
-//             Baudrate::Baud250K => pcan_basic::socket::Baudrate::Baud250K,
-//             Baudrate::Baud125K => pcan_basic::socket::Baudrate::Baud125K,
+//             Baudrate::Baud1M => peakcan_basic::socket::Baudrate::Baud1M,
+//             Baudrate::Baud500K => peakcan_basic::socket::Baudrate::Baud500K,
+//             Baudrate::Baud250K => peakcan_basic::socket::Baudrate::Baud250K,
+//             Baudrate::Baud125K => peakcan_basic::socket::Baudrate::Baud125K,
 //         }
 //     }
 // }

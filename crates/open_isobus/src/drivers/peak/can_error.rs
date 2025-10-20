@@ -1,4 +1,4 @@
-// use pcan_basic::error::{PcanError, PcanOkError};
+// use peakcan_basic::error::{PcanError, PcanOkError};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CanbusError {

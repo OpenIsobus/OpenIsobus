@@ -22,9 +22,9 @@ pub enum CanError {
     Other(String),
 }
 
-pub trait CanDriverTrait {
+pub trait CanDriverTrait<'a> {
     fn init(&mut self);
-    fn open(&mut self, baudrate: Option<Baudrate>);
+    fn open(&mut self, interface: &'a str, baudrate: Option<Baudrate>);
     fn close(&mut self);
     fn read(&mut self) -> Option<CanFrame>;
     fn write(&mut self, frame: CanFrame);
@@ -38,7 +38,7 @@ pub struct CanFrame {
 }
 
 impl CanFrame {
-    pub fn new(id: impl Into<Id>, data: &[u8]) -> Self {
+    pub fn new(id: impl TryInto<Id>, data: &[u8]) -> Self {
         let id = id.try_into().unwrap_or(Id::Extended(ExtendedId::MAX));
         let dlc = usize::min(data.len(), 8);
         let mut temp_data: Vec<u8> = Vec::new();
@@ -93,7 +93,7 @@ impl Default for CanFrame {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct StandardId(u32);
+pub struct StandardId(u16);
 
 impl StandardId {
     /// CAN ID `0`, the highest priority.
@@ -106,7 +106,7 @@ impl StandardId {
     ///
     /// This will return `None` if `raw` is out of range of an 11-bit integer (`> 0x7FF`).
     #[inline]
-    pub fn new(raw: u32) -> Option<Self> {
+    pub fn new(raw: u16) -> Option<Self> {
         if raw <= 0x7FF {
             Some(StandardId(raw))
         } else {
@@ -119,13 +119,13 @@ impl StandardId {
     /// # Safety
     /// Using this method can create an invalid ID and is thus marked as unsafe.
     #[inline]
-    pub const unsafe fn new_unchecked(raw: u32) -> Self {
+    pub const unsafe fn new_unchecked(raw: u16) -> Self {
         StandardId(raw)
     }
 
     /// Returns this CAN Identifier as a raw 32-bit integer.
     #[inline]
-    pub fn as_raw(&self) -> u32 {
+    pub fn as_raw(&self) -> u16 {
         self.0
     }
 }
@@ -171,7 +171,7 @@ impl ExtendedId {
     /// Returns the Base ID part of this extended identifier.
     pub fn standard_id(&self) -> StandardId {
         // ID-28 to ID-18
-        StandardId(self.0 >> 18)
+        StandardId((self.0 >> 18) as u16)
     }
 }
 
@@ -188,7 +188,7 @@ pub enum Id {
 impl Id {
     pub fn as_raw(&self) -> u32 {
         match self {
-            Id::Standard(id) => id.as_raw(),
+            Id::Standard(id) => id.as_raw() as u32,
             Id::Extended(id) => id.as_raw(),
         }
     }
@@ -214,8 +214,8 @@ impl From<Id> for u32 {
 
 impl From<u32> for Id {
     fn from(id: u32) -> Self {
-        if id <= StandardId::MAX.as_raw() {
-            return Id::Standard(StandardId(id));
+        if id <= StandardId::MAX.as_raw() as u32 {
+            return Id::Standard(StandardId(id as u16));
         } else if id <= ExtendedId::MAX.as_raw() {
             return Id::Extended(ExtendedId(id));
         }

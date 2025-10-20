@@ -2,20 +2,20 @@ use alloc::{boxed::Box, vec::Vec};
 
 use crate::{drivers::CanDriverTrait, iso_11783_5::NetworkManager, isobus::CanFrame};
 
-use super::{ExtendedTransportProtocolManager, TransportProtocolManager, PDU};
+use super::{ExtendedTransportProtocolManager, PDU, TransportProtocolManager};
 
-pub struct DataLinkLayer {
-    can_driver: Box<dyn CanDriverTrait>,
+pub struct DataLinkLayer<'a> {
+    can_driver: Box<dyn CanDriverTrait<'a>>,
     tp_manager: TransportProtocolManager,
     etp_manager: ExtendedTransportProtocolManager,
 }
 
-impl DataLinkLayer {
+impl<'a> DataLinkLayer<'a> {
     pub const MAX_FRAMES_IN_PER_PROCESS: u8 = 255;
 
-    pub fn new(mut can_driver: Box<dyn CanDriverTrait>) -> Self {
+    pub fn new(can_interface: &'a str, mut can_driver: Box<dyn CanDriverTrait<'a>>) -> Self {
         can_driver.init();
-        can_driver.open(None);
+        can_driver.open(can_interface, None);
 
         DataLinkLayer {
             can_driver,
@@ -71,7 +71,7 @@ impl DataLinkLayer {
             #[cfg(feature = "log_all_can_read")]
             log::debug!("read: {}", &frame);
 
-            let pdu: PDU = (&frame).into();
+            let pdu = PDU::from(&frame);
 
             // Only listen to global messages and messages ment for us.
             if !pdu.is_address_global()
@@ -106,41 +106,6 @@ impl DataLinkLayer {
             }
 
             pdus.push(pdu);
-
-            //  IF PGN = REQUEST PGN AND THE DESTINATION IS SPECIFIC        ; specific request
-            //  THEN
-            //      IF DA = ASSIGNED ADDRESS (destination)
-            //      THEN
-            //          SAVE 4 BYTE ID AND 3 DATA BYTES IN REQUEST QUEUE
-            //  IF PGN = REQUEST PGN AND THE DESTINATION IS GLOBAL          ; global request
-            //  THEN
-            //      SAVE 4 BYTE ID AND 3 DATA BYTES IN REQUEST QUEUE
-            //
-            //  IF PF < 240
-            //  THEN
-            //      IF DA = GLOBAL                                          ; PDU1 Format (DA = global)
-            //      THEN
-            //          USE JUMP TABLE FOR PGN VALUES OF INTEREST AND
-            //          IF SA = ID OF SPECIAL INTEREST
-            //          THEN
-            //              SAVE 8 BYTES OF DATA IN DEDICATED BUFFER
-            //          ELSE
-            //              SAVE 12 BYTE MESSAGE (ID AND DATA) IN CIRCULAR QUEUE
-            //      ELSE DA = SPECIFIC                                      ; PDU1 Format (DA = specific)
-            //          USE JUMP TABLE FOR PGN VALUES OF INTEREST AND
-            //          IF SA = ID OF SPECIAL INTEREST VALUES
-            //          THEN
-            //              SAVE 8 BYTES OF DATA IN DEDICATED BUFFER
-            //          ELSE
-            //              SAVE 12 BYTE MESSAGE (ID AND DATA) IN CIRCULAR QUEUE
-            //  IF PF >= 240                                                ; PDU2 Format
-            //  THEN
-            //      USE JUMP TABLE FOR PGN VALUES OF INTEREST AND
-            //      IF SA = ID OF SPECIAL INTEREST
-            //      THEN
-            //          SAVE 8 BYTES OF DATA IN DEDICATED BUFFER
-            //      ELSE
-            //          SAVE 12 BYTE MESSAGE (ID AND DATA) IN CIRCULAR QUEUE
         }
         pdus
     }

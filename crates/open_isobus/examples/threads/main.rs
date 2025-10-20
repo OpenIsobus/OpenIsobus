@@ -12,7 +12,7 @@ fn main() {
         .filter_level(log::LevelFilter::Debug)
         .format_timestamp_nanos()
         .init();
-    
+
     // Start the isobus thread
     thread::spawn(|| {
         isobus_task();

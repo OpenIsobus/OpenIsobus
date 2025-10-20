@@ -216,7 +216,7 @@ impl ExtendedTransportProtocolManager {
                 can.write(
                     PDU::new_etp_data_transfer(
                         i + 1,
-                        chunks[(next_packet - 1 + i as u32) as usize],
+                        chunks[(next_packet - 1 + i as u32) as usize], // TODO, Coused a panic on index 7270
                         da,
                         sa,
                     )

@@ -1,9 +1,8 @@
 use core::fmt::Debug;
 
 use alloc::vec::Vec;
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Name {
     value: u64,
 }
